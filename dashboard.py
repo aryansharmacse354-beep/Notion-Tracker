@@ -8,6 +8,15 @@ Features:
 5. Interactive HITL Cognitive Audit Panel, OCC 3-Way Merge Simulator, and SHA-256 Ledger.
 """
 
+import sys
+import asyncio
+
+if sys.platform == "win32":
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception:
+        pass
+
 import time
 import json
 import random
@@ -15,6 +24,7 @@ import os
 import base64
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
+
 
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont

@@ -46,11 +46,21 @@ class WebhookIngestRequest(BaseModel):
     payload: TaskPayload
 
 
+import sys
+import asyncio
+
+if sys.platform == "win32":
+    try:
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception:
+        pass
+
 from pathlib import Path
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+ASSETS_DIR = STATIC_DIR / "assets"
 
 @app.get("/")
 def get_spa_root():
@@ -60,8 +70,30 @@ def get_spa_root():
         return FileResponse(index_file)
     return {"message": "Notion Tracker Gateway Active", "portal": "/static/index.html"}
 
+@app.get("/styles.css")
+def get_styles():
+    f = STATIC_DIR / "styles.css"
+    if f.exists():
+        return FileResponse(f, media_type="text/css")
+    raise HTTPException(status_code=404, detail="File not found")
+
+@app.get("/app.js")
+def get_app_js():
+    f = STATIC_DIR / "app.js"
+    if f.exists():
+        return FileResponse(f, media_type="application/javascript")
+    raise HTTPException(status_code=404, detail="File not found")
+
+@app.get("/assets/{file_path:path}")
+def get_asset_file(file_path: str):
+    f = ASSETS_DIR / file_path
+    if f.exists():
+        return FileResponse(f)
+    raise HTTPException(status_code=404, detail="Asset not found")
+
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
 
 @app.get("/health")
 def health_check():
