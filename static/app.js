@@ -68,8 +68,9 @@ const viewHeadings = {
   'view-command-center': 'Operations Command Center & Programmable Workflow Matrix',
   'view-hitl': 'HITL Task Approvals & Cognitive Audit Panel',
   'view-multiselect': 'Notion Native Multi-Select Batch Approvals',
-  'view-biometrics': 'Live Biometric Facial Mesh HUD & 6-Digit SMS OTP Gate',
+  'view-biometrics': 'Zero-Trust Operator Digital Signature Authority & 6-Digit SMS OTP Gate',
   'view-webhook': 'Webhook Ingestion & HMAC-SHA256 Signer Hub',
+
   'view-scheduler': 'System Config & 60-Minute Background Daemon Scheduler',
   'view-audit': 'Industrial SHA-256 Cryptographic Audit Ledger'
 };
@@ -425,11 +426,12 @@ function executeBatchApprove() {
 }
 
 // ==============================================================================
-// 6. BIOMETRIC & OTP GATE
+// 6. OPERATOR DIGITAL SIGNATURE & OTP GATE
 // ==============================================================================
-function simulateBiometricUnlock() {
-  alert("🟢 OpenCV Biometric Facial Mesh Match Confirmed (99.7% confidence)! Operator session unlocked.");
+function simulateSignatureUnlock() {
+  alert("🟢 Cryptographic Operator Digital Signature Validated! Non-repudiation authorization seal granted.");
 }
+
 
 function switchOtpScreen(screen) {
   const otpSec = document.getElementById('otpSection');

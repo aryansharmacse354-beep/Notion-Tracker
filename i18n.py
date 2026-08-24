@@ -46,8 +46,9 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "nav_command_center": "🎛️ Operations Command Center & Workflows",
         "nav_hitl": "📋 HITL Task Approvals",
         "nav_multiselect": "⚡ Notion Multi-Select Batch",
-        "nav_biometrics": "🔐 Biometric & OTP Security Gate",
+        "nav_biometrics": "🔐 Operator Digital Signature & MFA Gate",
         "nav_webhook": "🧪 Webhook Ingestion Hub",
+
         "nav_scheduler": "⚙️ System Config & 60m Daemon",
         "nav_audit": "📊 SHA-256 Audit Ledger & Reports",
 
