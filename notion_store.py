@@ -4,11 +4,13 @@ Provides a unified interface for Notion API operations with local SQLite fallbac
 Manages Tasks Database, Run Log Database, and RBAC User Profiles with thread-safe OCC.
 """
 
+from contextlib import contextmanager
 import sqlite3
 import json
 import time
 import uuid
 import logging
+
 try:
     import requests
 except ImportError:
@@ -47,12 +49,22 @@ class NotionStore:
         self._init_db()
         self._seed_default_users()
 
-    def _get_connection(self) -> sqlite3.Connection:
+    @contextmanager
+    def _get_connection(self):
+        """Yields a thread-safe sqlite3 connection and guarantees commit and close upon exit."""
         conn = sqlite3.connect(self.db_path, check_same_thread=False)
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
     def _init_db(self) -> None:
+
         """Initializes database tables if they do not exist."""
         with self._get_connection() as conn:
             cursor = conn.cursor()

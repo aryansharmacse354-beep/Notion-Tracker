@@ -966,7 +966,8 @@ elif active_module_key == "nav_biometrics":
         if cam_pic:
             pil_img = Image.open(cam_pic)
             processed_img, valid, msg = process_face_mesh_overlay(pil_img)
-            st.image(processed_img, caption="OpenCV Biometric Mesh Scan Overlay", use_column_width=True)
+            st.image(processed_img, caption="OpenCV Biometric Mesh Scan Overlay", use_container_width=True)
+
             if valid:
                 st.session_state.biometric_authenticated = True
                 st.success(f"🟢 **BIOMETRIC FACE MATCH CONFIRMED!**\n\n{msg}\n\nOperator ID `{st.session_state.active_user}` unlocked for administrative approvals.")
