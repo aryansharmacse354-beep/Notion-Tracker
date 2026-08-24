@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notion Tracker | Enterprise Zero-Trust HITL Portal</title>
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- MASTER 100VH APP CONTAINER -->
+  <div class="app-container">
+
+    <!-- LEFT SIDEBAR PANEL -->
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="brand-header">
+          <img class="brand-logo" src="assets/logo.png" alt="Emblem">
+          <div class="brand-info">
+            <h2>NOTION TRACKER</h2>
+            <span>Zero-Trust HITL</span>
+          </div>
+        </div>
+
+        <ul class="nav-menu">
+          <li class="nav-item">
+            <a class="nav-link active" data-view="view-command-center" onclick="switchView('view-command-center', this)">
+              <span class="nav-icon">🎛️</span>
+              <span>Command Center</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-view="view-hitl" onclick="switchView('view-hitl', this)">
+              <span class="nav-icon">📋</span>
+              <span>HITL Task Approvals</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-view="view-multiselect" onclick="switchView('view-multiselect', this)">
+              <span class="nav-icon">⚡</span>
+              <span>Multi-Select Batch</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-view="view-biometrics" onclick="switchView('view-biometrics', this)">
+              <span class="nav-icon">🔐</span>
+              <span>Biometric & OTP Gate</span>
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link" data-view="view-webhook" onclick="switchView('view-webhook', this)">
+              <span class="nav-icon">🧪</span>
+              <span>Webhook Simulator</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-view="view-scheduler" onclick="switchView('view-scheduler', this)">
+              <span class="nav-icon">⚙️</span>
+              <span>System Config & 60m</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-view="view-audit" onclick="switchView('view-audit', this)">
+              <span class="nav-icon">📊</span>
+              <span>SHA-256 Audit Ledger</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- SIDEBAR BOTTOM ACTIONS -->
+      <div class="sidebar-bottom">
+        <button class="bottom-action-btn" onclick="openModal('feedbackModal')">
+          <span>💬 Give Feedback</span>
+          <span>➔</span>
+        </button>
+        <button class="bottom-action-btn" onclick="openModal('reportModal')">
+          <span>⚠️ Report Issue</span>
+          <span>➔</span>
+        </button>
+        <button class="bottom-action-btn" onclick="openModal('resetModal')">
+          <span>🔄 Reset Settings</span>
+          <span>➔</span>
+        </button>
+        <button class="bottom-action-btn logout" onclick="openModal('logoutModal')">
+          <span>🚪 Operator Logout</span>
+          <span>🔒</span>
+        </button>
+      </div>
+    </aside>
+
+
+    <!-- MAIN CONTENT AREA (100% REMAINING HEIGHT, ZERO PAGE SCROLL) -->
+    <main class="main-wrapper">
+
+      <!-- TOP NAVBAR -->
+      <header class="top-navbar">
+        <div class="top-nav-left">
+          <h2 class="view-title" id="currentViewHeading">HITL Task Approvals & Cognitive Audit Panel</h2>
+          <span class="badge-tag indigo">Zero-Trust Pipeline Active</span>
+        </div>
+        <div class="top-nav-right">
+          <div class="operator-chip">
+            <span class="status-dot"></span>
+            <span id="operatorDisplay">Aryan Sharma (Lead Developer)</span>
+          </div>
+          <span class="badge-tag" style="background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid #10b981;">
+            ⚡ Rate Limit: NOMINAL
+          </span>
+        </div>
+      </header>
+
+      <!-- =========================================================================
+           VIEW 0: OPERATIONS COMMAND CENTER & VISUAL WORKFLOW BUILDER
+           ========================================================================= -->
+      <section class="view-viewport active" id="view-command-center">
+        <div style="background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); padding: 12px 16px; border-radius: 10px; margin-bottom: 16px;">
+          <div style="font-size: 0.95rem; font-weight: 700; color: #c7d2fe;">🎛️ Operations Command Center & Programmable Workflow Matrix</div>
+          <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 4px;">
+            💡 <b>The Turn-Off Test</b>: Notion's native drag-and-drop database grid allows managers to position Tasks Kanban boards, Run Log ledgers, Operator Profiles, and System Health tables side-by-side. If servers are turned off, the workspace layout remains 100% structured and readable.
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; height: calc(100% - 90px); min-height: 0;">
+          <!-- Board 1: Tasks Kanban View -->
+          <div class="scroll-panel">
+            <div class="panel-header">
+              <h3><span>📋</span> Tasks Kanban Board</h3>
+              <span class="badge-tag green">Live Sync</span>
+            </div>
+            <div class="panel-body" id="ccTasksKanban">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Board 2: Operator Leaderboard & Badges -->
+          <div class="scroll-panel">
+            <div class="panel-header">
+              <h3><span>🏆</span> Operator Profiles & Streaks</h3>
+              <span class="badge-tag orange">Gamified</span>
+            </div>
+            <div class="panel-body" id="ccOperatorProfiles">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Board 3: Visual Workflow Templates -->
+          <div class="scroll-panel">
+            <div class="panel-header">
+              <h3><span>⚡</span> Pipeline Templates</h3>
+              <span class="badge-tag indigo">Notion Matrix</span>
+            </div>
+            <div class="panel-body" id="ccPipelineTemplates">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================================
+           VIEW 1: HITL TASK APPROVALS & COGNITIVE AUDIT PANEL
+           ========================================================================= -->
+      <section class="view-viewport" id="view-hitl">
+
+        <div class="metrics-strip">
+          <div class="metric-card">
+            <div class="metric-txt">Pending Review</div>
+            <div class="metric-num" id="metricPending">1</div>
+          </div>
+          <div class="metric-card success">
+            <div class="metric-txt">Approved / Dispatched</div>
+            <div class="metric-num" id="metricDispatched">12</div>
+          </div>
+          <div class="metric-card critical">
+            <div class="metric-txt">High/Critical Risk</div>
+            <div class="metric-num" id="metricCritical">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-txt">Token Bucket Available</div>
+            <div class="metric-num" id="metricTokens">9.4 / 10</div>
+          </div>
+        </div>
+
+        <div class="grid-2col">
+          <!-- Left Task List Sub-Panel (Component Scroll) -->
+          <div class="scroll-panel">
+            <div class="panel-header">
+              <h3><span>📂</span> Registered Tasks Database</h3>
+              <button class="btn btn-secondary" onclick="loadSampleTasks()" style="font-size: 0.75rem; padding: 4px 10px;">➕ Add Sample</button>
+            </div>
+            <div class="panel-body" id="taskListContainer">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Right Detail Audit Sub-Panel (Component Scroll) -->
+          <div class="scroll-panel">
+            <div class="panel-header">
+              <h3 id="detailHeaderTitle"><span>🔎</span> Cognitive Audit Panel</h3>
+              <span class="badge-tag indigo" id="detailOccTag">OCC: v1</span>
+            </div>
+            <div class="panel-body" id="taskDetailBody">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================================
+           VIEW 2: NOTION NATIVE MULTI-SELECT BATCH
+           ========================================================================= -->
+      <section class="view-viewport" id="view-multiselect">
+        <div class="scroll-panel" style="height: 100%;">
+          <div class="panel-header">
+            <h3><span>⚡</span> Notion Native Multi-Select Batch Approvals</h3>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn btn-secondary" onclick="seed10BatchItems()">➕ Seed 10 Database Rows</button>
+              <button class="btn btn-primary" onclick="executeBatchApprove()">⚡ Batch Approve Selected Rows</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="risk-alert-box low" style="margin-bottom: 16px;">
+              <span>In Notion, non-technical users highlight 10 rows at once, right-click, and change Status to "Approved". Select rows below to trigger concurrent batch execution.</span>
+            </div>
+            <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+              <label style="font-weight: 700; font-size: 0.85rem;">
+                <input type="checkbox" id="selectAllBatch" onchange="toggleSelectAllBatch(this)"> Select All Database Rows
+              </label>
+              <span id="batchCountBadge" style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">0 rows selected</span>
+            </div>
+            <div id="batchRowsList">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================================
+           VIEW 3: BIOMETRICS & OTP SECURITY GATE
+           ========================================================================= -->
+      <section class="view-viewport" id="view-biometrics">
+        <div class="grid-2col" style="height: 100%;">
+          <div class="scroll-panel">
+            <div class="panel-header">
+              <h3><span>👤</span> OpenCV Biometric Facial Mesh HUD</h3>
+              <span class="badge-tag" style="background: rgba(16,185,129,0.15); color: #10b981;">HARDWARE BOUND</span>
+            </div>
+            <div class="panel-body" style="text-align: center;">
+              <div style="position: relative; display: inline-block; margin: 10px 0;">
+                <div style="width: 280px; height: 280px; border-radius: 12px; background: #0b0f19; border: 2px solid #10b981; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
+                  <img src="assets/logo.png" style="width: 120px; opacity: 0.8; animation: intro3D 6s infinite ease-in-out;">
+                  <div style="position: absolute; top: 20px; left: 20px; width: 40px; height: 40px; border-top: 3px solid #00ff88; border-left: 3px solid #00ff88;"></div>
+                  <div style="position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; border-top: 3px solid #00ff88; border-right: 3px solid #00ff88;"></div>
+                  <div style="position: absolute; bottom: 20px; left: 20px; width: 40px; height: 40px; border-bottom: 3px solid #00ff88; border-left: 3px solid #00ff88;"></div>
+                  <div style="position: absolute; bottom: 20px; right: 20px; width: 40px; height: 40px; border-bottom: 3px solid #00ff88; border-right: 3px solid #00ff88;"></div>
+                  <div style="position: absolute; bottom: 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #00ff88; font-weight: 700;">
+                    MATCH: 99.7% CONFIRMED
+                  </div>
+                </div>
+              </div>
+              <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 14px;">Facial Biometric Mesh Key: <code>BIO_ARYAN_SHARMA_2026</code></p>
+              <button class="btn btn-primary" onclick="simulateBiometricUnlock()" style="width: 280px;">🟢 Simulate Biometric Scan Match</button>
+            </div>
+          </div>
+
+          <div class="scroll-panel">
+            <div class="panel-header">
+              <h3><span>📱</span> 6-Digit Cryptographic SMS OTP Gate</h3>
+              <span class="badge-tag indigo">IN +91 Standard</span>
+            </div>
+            <div class="panel-body">
+              <!-- Sub-switcher for Demo -->
+              <div style="display: flex; gap: 8px; margin-bottom: 14px; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px;">
+                <button class="btn btn-primary" id="btnOtpTab" onclick="switchOtpScreen('otp')" style="flex: 1; font-size: 0.78rem; padding: 6px;">📱 Phone OTP Login</button>
+                <button class="btn btn-secondary" id="btnRegTab" onclick="switchOtpScreen('register')" style="flex: 1; font-size: 0.78rem; padding: 6px;">📝 Operator Registration</button>
+              </div>
+
+              <!-- OTP Section -->
+              <div id="otpSection">
+                <div class="risk-alert-box low">
+                  <span>Enter 10-digit mobile number to request cryptographic authorization PIN:</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Mobile Number (IN +91)</label>
+                  <div style="display: flex; border-radius: 6px; overflow: hidden; border: 1px solid var(--card-border);">
+                    <span style="background: var(--bg-card-sub); padding: 8px 12px; font-weight: 700; color: #94a3b8; font-size: 0.85rem; border-right: 1px solid var(--card-border);">IN +91</span>
+                    <input type="tel" id="otpPhoneInput" maxlength="10" class="form-control" placeholder="9876543210" style="border: none; border-radius: 0; font-size: 0.95rem;">
+                  </div>
+                </div>
+                <button class="btn btn-secondary" onclick="generatePhoneOTP()" style="width: 100%; margin-bottom: 12px;">Get OTP Code →</button>
+                <div class="form-group">
+                  <label class="form-label">Dispatched OTP Code: <b id="otpDisplay" style="color: #10b981; font-family: monospace; font-size: 1.1rem; margin-left: 6px;">748291</b></label>
+                  <input type="password" id="otpInput" maxlength="6" class="form-control" placeholder="••••••" style="font-size: 1.2rem; text-align: center; letter-spacing: 0.2em;">
+                </div>
+                <button class="btn btn-indigo" onclick="verifyOTP()" style="width: 100%;">Verify OTP PIN</button>
+              </div>
+
+              <!-- Registration Section -->
+              <div id="registerSection" style="display: none;">
+                <div class="form-group">
+                  <label class="form-label">First & Last Name</label>
+                  <div style="display: flex; gap: 8px;">
+                    <input type="text" id="regFirstName" class="form-control" placeholder="John">
+                    <input type="text" id="regLastName" class="form-control" placeholder="Doe">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Email Address</label>
+                  <input type="email" id="regEmail" class="form-control" placeholder="john.doe@company.com">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Phone Number</label>
+                  <input type="tel" id="regPhone" class="form-control" placeholder="+91 98765 43210">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Password</label>
+                  <input type="password" id="regPassword" class="form-control" placeholder="••••••••••••">
+                </div>
+                <button class="btn btn-primary" onclick="submitRegistration()" style="width: 100%;">Create Account →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- =========================================================================
+           VIEW 4: WEBHOOK SIMULATOR
+           ========================================================================= -->
+      <section class="view-viewport" id="view-webhook">
+        <div class="scroll-panel" style="height: 100%;">
+          <div class="panel-header">
+            <h3><span>🧪</span> Webhook Ingestion & HMAC-SHA256 Signer Hub</h3>
+            <button class="btn btn-primary" onclick="triggerSimulatedWebhook()">🚀 Dispatch Signed Webhook (Run AI Pre-Audit)</button>
+          </div>
+          <div class="panel-body">
+            <div class="form-group">
+              <label class="form-label">Payload Preset</label>
+              <select id="presetSelect" class="form-control" onchange="loadWebhookPreset(this.value)">
+                <option value="academic">Academic Registration (Normal Risk)</option>
+                <option value="security">Emergency Security Escalation (Critical Risk)</option>
+                <option value="infra">Infrastructure Provisioning (High Risk)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Raw Ingestion Payload (JSON)</label>
+              <textarea id="webhookJsonArea" class="form-control" rows="8" style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Calculated X-Signature-HMAC Header</label>
+              <input type="text" id="calculatedHmacInput" class="form-control" readonly style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #34d399;">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================================
+           VIEW 5: SYSTEM CONFIG & 60M DAEMON SCHEDULER
+           ========================================================================= -->
+      <section class="view-viewport" id="view-scheduler">
+        <div class="scroll-panel" style="height: 100%;">
+          <div class="panel-header">
+            <h3><span>⚙️</span> System Config & 60-Minute Background Daemon Scheduler</h3>
+            <button class="btn btn-primary" onclick="saveDaemonConfig()">💾 Save Runtime Configuration</button>
+          </div>
+          <div class="panel-body">
+            <div class="metrics-strip" style="margin-bottom: 20px;">
+              <div class="metric-card">
+                <div class="metric-txt">Polling Interval</div>
+                <div class="metric-num">60m</div>
+              </div>
+              <div class="metric-card success">
+                <div class="metric-txt">Auto-Refresh</div>
+                <div class="metric-num" style="font-size: 1.2rem;">ENABLED</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-txt">Next Scheduled Sync</div>
+                <div class="metric-num" style="font-size: 1.2rem;">58m 22s</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-txt">Batch Worker Pool</div>
+                <div class="metric-num">10 threads</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Polling Interval Cadence</label>
+              <select id="daemonIntervalSelect" class="form-control">
+                <option value="60" selected>60 Minutes (Production Enterprise Default)</option>
+                <option value="30">30 Minutes</option>
+                <option value="15">15 Minutes</option>
+                <option value="5">5 Minutes</option>
+                <option value="1">1 Minute</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+              <button class="btn btn-secondary" onclick="triggerManualSyncNow()">⚡ Trigger Immediate Manual Daemon Sync</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================================
+           VIEW 6: SHA-256 AUDIT LEDGER & REPORTS
+           ========================================================================= -->
+      <section class="view-viewport" id="view-audit">
+        <div class="scroll-panel" style="height: 100%;">
+          <div class="panel-header">
+            <h3><span>📊</span> Industrial SHA-256 Cryptographic Audit Ledger</h3>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn btn-secondary" onclick="downloadReport('pdf')">📄 Export PDF</button>
+              <button class="btn btn-secondary" onclick="downloadReport('excel')">📊 Export Excel</button>
+              <button class="btn btn-danger" onclick="testTamperLedger()">⚠️ Tamper Test</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="risk-alert-box low" id="ledgerStatusBox">
+              <span>🟢 <b>AUDIT LEDGER INTEGRITY: SECURE</b> — Deterministic signature hash chain validated against genesis block.</span>
+            </div>
+
+            <!-- RUN LOG AUDITOR SEARCH BAR -->
+            <div style="display: grid; grid-template-columns: 2.5fr 1.2fr 1.2fr; gap: 12px; margin-bottom: 14px;">
+              <div>
+                <label class="form-label" style="font-size: 0.72rem;">Search Run Logs</label>
+                <input type="text" id="runLogSearchInput" class="form-control" placeholder="Filter by run name, provider, status, or keyword..." oninput="filterRunLogs()">
+              </div>
+              <div>
+                <label class="form-label" style="font-size: 0.72rem;">Provider / Source</label>
+                <select id="runLogProviderSelect" class="form-control" onchange="filterRunLogs()">
+                  <option value="ALL">All Providers</option>
+                  <option value="Academic Registration Portal">Academic Registration</option>
+                  <option value="AWS GuardDuty Ingestion">AWS GuardDuty</option>
+                  <option value="SystemHealthMonitor">System Health Monitor</option>
+                  <option value="Webhook Ingestion">Webhook Gateway</option>
+                  <option value="Aryan Sharma">Aryan Sharma</option>
+                  <option value="Atul Yadav">Atul Yadav</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label" style="font-size: 0.72rem;">Status / Action</label>
+                <select id="runLogStatusSelect" class="form-control" onchange="filterRunLogs()">
+                  <option value="ALL">All Statuses</option>
+                  <option value="INGESTED">INGESTED</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Dispatched">Dispatched</option>
+                  <option value="SYSTEM_HEARTBEAT">SYSTEM_HEARTBEAT</option>
+                  <option value="Rejected">Rejected</option>
+                  <option value="CRITICAL">CRITICAL</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="runLogMatchBadge" style="font-size: 0.76rem; color: #818cf8; font-weight: 700; margin-bottom: 10px;">
+              Displaying all audit log records
+            </div>
+
+            <div id="ledgerTableWrapper">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+    </main>
+  </div>
+
+  <!-- MODALS -->
+
+  <!-- Feedback Modal -->
+  <div class="modal-overlay" id="feedbackModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>💬 Provide Feedback</h3>
+        <button class="close-modal" onclick="closeModal('feedbackModal')">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">How can we improve Notion Tracker?</label>
+        <textarea class="form-control" rows="4" placeholder="Enter your thoughts..."></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="submitFeedback()" style="width: 100%;">Submit Feedback</button>
+    </div>
+  </div>
+
+  <!-- Report Issue Modal -->
+  <div class="modal-overlay" id="reportModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>⚠️ Report an Issue</h3>
+        <button class="close-modal" onclick="closeModal('reportModal')">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Issue Summary</label>
+        <input type="text" class="form-control" placeholder="Brief description of the bug...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Reproduction Steps</label>
+        <textarea class="form-control" rows="3" placeholder="Steps to reproduce..."></textarea>
+      </div>
+      <button class="btn btn-danger" onclick="submitIssue()" style="width: 100%;">Submit Bug Report</button>
+    </div>
+  </div>
+
+  <!-- Reset Settings Modal -->
+  <div class="modal-overlay" id="resetModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>🔄 Reset Settings</h3>
+        <button class="close-modal" onclick="closeModal('resetModal')">✕</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+        Reset all local preferences, polling cadences (revert to 60m), and theme defaults?
+      </p>
+      <button class="btn btn-danger" onclick="resetSettingsConfirm()" style="width: 100%;">Confirm Reset to Defaults</button>
+    </div>
+  </div>
+
+  <!-- Logout Modal -->
+  <div class="modal-overlay" id="logoutModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>🔒 Confirm Operator Logout</h3>
+        <button class="close-modal" onclick="closeModal('logoutModal')">✕</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+        Lock biometric session and log out active operator <b>Aryan Sharma</b>?
+      </p>
+      <button class="btn btn-danger" onclick="confirmLogout()" style="width: 100%;">Lock & Logout</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

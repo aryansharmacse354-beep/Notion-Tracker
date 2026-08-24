@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  notion-tracker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: notion_tracker_app
+    ports:
+      - "8000:8000"   # FastAPI Webhook Ingestion Gateway
+      - "8501:8501"   # Streamlit HITL Dashboard
+    environment:
+      - WEBHOOK_SECRET=super_secret_enterprise_notion_key_2026
+      - STORAGE_MODE=hybrid
+      - RATE_LIMIT_CAPACITY=10.0
+      - RATE_LIMIT_REPLENISH_RATE=2.0
+    volumes:
+      - ./data:/app/data
+      - ./reports:/app/reports
+    restart: unless-stopped
