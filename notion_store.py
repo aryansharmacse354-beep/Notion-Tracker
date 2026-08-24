@@ -578,26 +578,29 @@ class NotionStore:
         """Appends a new cryptographically signed entry to the audit log chain."""
 
         now = time.time()
-        last_sig = self.get_latest_signature()
-
-        sig = AuditLedger.compute_record_signature(
-            record_id=record_id,
-            action=action,
-            operator_name=operator_name,
-            timestamp=now,
-            payload_data=payload_data,
-            prev_signature=last_sig,
-        )
-
         payload_json = json.dumps(payload_data, sort_keys=True)
+
         with self._get_connection() as conn:
             cursor = conn.cursor()
+            cursor.execute("SELECT signature FROM audit_logs ORDER BY id DESC LIMIT 1")
+            row = cursor.fetchone()
+            last_sig = row["signature"] if row else AuditLedger.GENESIS_HASH
+
+            sig = AuditLedger.compute_record_signature(
+                record_id=record_id,
+                action=action,
+                operator_name=operator_name,
+                timestamp=now,
+                payload_data=payload_data,
+                prev_signature=last_sig,
+            )
+
             cursor.execute("""
                 INSERT INTO audit_logs (record_id, action, operator_name, timestamp, payload_data, signature, prev_signature)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (record_id, action, operator_name, now, payload_json, sig, last_sig))
-            conn.commit()
             log_id = cursor.lastrowid
+
 
         return {
             "id": log_id,
