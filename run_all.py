@@ -21,9 +21,9 @@ def start_all_services():
 
     try:
         # 1. Start FastAPI Webhook Ingestion Gateway
-        print(f"[*] Starting Webhook Gateway on http://{GATEWAY_HOST}:{GATEWAY_PORT}...")
+        print(f"[*] Starting Webhook Gateway on http://127.0.0.1:{GATEWAY_PORT}...")
         p_gw = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "webhook_gateway:app", "--host", GATEWAY_HOST, "--port", str(GATEWAY_PORT)],
+            [sys.executable, "-m", "uvicorn", "webhook_gateway:app", "--host", "127.0.0.1", "--port", str(GATEWAY_PORT)],
         )
         processes.append(("Webhook Gateway", p_gw))
 
@@ -39,17 +39,18 @@ def start_all_services():
         time.sleep(1)
 
         # 3. Start Streamlit HITL Dashboard
-        print(f"[*] Starting Streamlit HITL Dashboard on http://localhost:{DASHBOARD_PORT}...")
+        print(f"[*] Starting Streamlit HITL Dashboard on http://127.0.0.1:{DASHBOARD_PORT}...")
         p_ui = subprocess.Popen(
-            [sys.executable, "-m", "streamlit", "run", "dashboard.py", "--server.port", str(DASHBOARD_PORT), "--server.headless", "true"],
+            [sys.executable, "-m", "streamlit", "run", "dashboard.py", "--server.address", "127.0.0.1", "--server.port", str(DASHBOARD_PORT), "--server.headless", "false", "--server.enableCORS", "false", "--server.enableXsrfProtection", "false", "--browser.gatherUsageStats", "false"],
         )
         processes.append(("Streamlit Dashboard", p_ui))
 
         print("\n" + "=" * 65)
         print(" ✅ ALL NOTION TRACKER SERVICES RUNNING")
-        print(f" • Webhook Ingestion URL: http://localhost:{GATEWAY_PORT}/v1/webhook/ingest")
-        print(f" • Streamlit Dashboard:   http://localhost:{DASHBOARD_PORT}")
-        print(f" • Throttle Status:       http://localhost:{GATEWAY_PORT}/api/v1/throttle-state")
+        print(f" • Webhook Ingestion URL: http://127.0.0.1:{GATEWAY_PORT}/v1/webhook/ingest")
+        print(f" • Streamlit Dashboard:   http://127.0.0.1:{DASHBOARD_PORT}")
+        print(f" • Throttle Status:       http://127.0.0.1:{GATEWAY_PORT}/api/v1/throttle-state")
+
         print(f" • Signature Verifier:    python verify_signatures.py")
         print(" Press Ctrl+C to terminate all services.")
         print("=" * 65 + "\n")
