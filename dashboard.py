@@ -10,12 +10,16 @@ Features:
 
 import sys
 import asyncio
+import warnings
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 if sys.platform == "win32":
     try:
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     except Exception:
         pass
+
 
 import time
 import json

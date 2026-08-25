@@ -48,12 +48,16 @@ class WebhookIngestRequest(BaseModel):
 
 import sys
 import asyncio
+import warnings
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 if sys.platform == "win32":
     try:
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     except Exception:
         pass
+
 
 from pathlib import Path
 from fastapi.responses import JSONResponse, FileResponse
