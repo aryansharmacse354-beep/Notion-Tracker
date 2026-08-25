@@ -135,16 +135,10 @@ fact_border = "#475569"
 
 st.markdown(f"""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    
-    html, body, [class*="css"] {{
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    html, body, [class*="css"], .stApp {{
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         color: {text_main};
-    }}
-    
-    .stApp {{
-        background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-        position: relative;
+        background: #0f172a !important;
     }}
     
     /* Main Layout */
@@ -153,8 +147,8 @@ st.markdown(f"""
         padding-bottom: 2.5rem;
         max-width: 1420px;
         position: relative;
-        z-index: 1;
     }}
+
 
     
     /* Header Gradient & Hero Styling */
@@ -339,10 +333,8 @@ st.markdown(f"""
         color: {text_muted};
     }}
 </style>
-
-<!-- AMBIENT LOGO WATERMARK -->
-<div class="bg-watermark-overlay"></div>
 """, unsafe_allow_html=True)
+
 
 
 
