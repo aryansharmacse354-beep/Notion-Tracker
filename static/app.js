@@ -50,8 +50,26 @@ const sampleTasks = [
   }
 ];
 
+// Initialize Theme (Notion Dark by default, with Light Mode support)
+function initTheme() {
+  const savedTheme = localStorage.getItem('notion_tracker_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = savedTheme === 'light' ? '☀️' : '🌙';
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('notion_tracker_theme', next);
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = next === 'light' ? '☀️' : '🌙';
+}
+
 // Initialize on Load
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   tasksData = [...sampleTasks];
   fetchTasksFromApi();
   fetchAuditLogsFromApi();
@@ -60,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderBatchRows();
   renderLedger();
   loadDlqTasks();
-  loadWebhookPreset('academic');
+  loadWebhookPreset('lab_provisions');
 });
 
 
@@ -174,30 +192,30 @@ function renderCommandCenter() {
     const dispatchedTasks = tasksData.filter(t => t.status !== 'Ready for Review');
 
     kanban.innerHTML = `
-      <div style="font-size: 0.8rem; font-weight: 700; color: #f59e0b; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-        <span>● Ready for Review (${readyTasks.length})</span>
-        <span style="font-size: 0.7rem; color: #94a3b8;">Click card to inspect</span>
+      <div style="font-size: 0.78rem; font-weight: 700; color: var(--tag-yellow-text); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <span>🟡 Ready for Review (${readyTasks.length})</span>
+        <span style="font-size: 0.7rem; color: var(--text-muted);">Click card to inspect</span>
       </div>
-      ${readyTasks.length === 0 ? '<div style="font-size: 0.75rem; color: #64748b; padding: 10px; text-align: center;">No pending review tasks.</div>' : ''}
+      ${readyTasks.length === 0 ? '<div style="font-size: 0.75rem; color: var(--text-muted); padding: 12px; text-align: center;">No pending review tasks.</div>' : ''}
       ${readyTasks.map(t => `
-        <div style="background: #1e293b; border-left: 3px solid ${t.risk_level === 'CRITICAL' ? '#ef4444' : (t.risk_level === 'HIGH' ? '#f59e0b' : '#10b981')}; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: transform 0.15s ease;" onclick="openTaskInReview('${t.id}')">
-          <div style="font-size: 0.82rem; font-weight: 700; color: #f8fafc;">${t.title}</div>
-          <div style="font-size: 0.70rem; color: #94a3b8; margin: 4px 0 8px 0; display: flex; justify-content: space-between;">
-            <span>Risk: <b style="color: ${t.risk_level === 'CRITICAL' ? '#ef4444' : (t.risk_level === 'HIGH' ? '#f59e0b' : '#10b981')};">${t.risk_level}</b></span>
-            <span>OCC: <code>v${t.version || 1}</code></span>
+        <div style="background: var(--bg-card-sub); border: 1px solid var(--card-border); border-left: 3px solid ${t.risk_level === 'CRITICAL' ? '#dc2626' : (t.risk_level === 'HIGH' ? '#ea580c' : '#16a34a')}; padding: 10px 12px; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: all 0.15s ease;" onclick="openTaskInReview('${t.id}')">
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;">${t.title}</div>
+          <div style="font-size: 0.70rem; color: var(--text-secondary); margin-bottom: 6px; display: flex; justify-content: space-between;">
+            <span>Risk: <b style="color: ${t.risk_level === 'CRITICAL' ? '#dc2626' : (t.risk_level === 'HIGH' ? '#ea580c' : '#16a34a')};">${t.risk_level}</b></span>
+            <span>OCC: <code style="font-family: 'JetBrains Mono', monospace;">v${t.version || 1}</code></span>
           </div>
           <div style="display: flex; gap: 6px;">
-            <button class="btn btn-primary" style="font-size: 0.70rem; padding: 3px 8px;" onclick="quickApproveTask('${t.id}', event)">✓ Quick Approve</button>
-            <button class="btn btn-secondary" style="font-size: 0.70rem; padding: 3px 8px;" onclick="openTaskInReview('${t.id}')">🔍 Review</button>
+            <button class="btn btn-primary" style="font-size: 0.70rem; padding: 2px 7px;" onclick="quickApproveTask('${t.id}', event)">✓ Approve</button>
+            <button class="btn btn-secondary" style="font-size: 0.70rem; padding: 2px 7px;" onclick="openTaskInReview('${t.id}')">🔍 Review</button>
           </div>
         </div>
       `).join('')}
       
-      <div style="font-size: 0.8rem; font-weight: 700; color: #6366f1; margin: 12px 0 6px 0;">● Dispatched & Approved (${dispatchedTasks.length})</div>
+      <div style="font-size: 0.78rem; font-weight: 700; color: var(--accent-primary); margin: 14px 0 8px 0;">🔵 Dispatched & Approved (${dispatchedTasks.length})</div>
       ${dispatchedTasks.map(t => `
-        <div style="background: #0f172a; border-left: 3px solid #6366f1; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; cursor: pointer;" onclick="openTaskInReview('${t.id}')">
-          <div style="font-size: 0.8rem; font-weight: 700; color: #cbd5e1;">${t.title}</div>
-          <div style="font-size: 0.7rem; color: #64748b; margin-top: 2px;">Status: <b style="color: #818cf8;">${t.status}</b> | OCC: <code>v${t.version || 1}</code></div>
+        <div style="background: var(--bg-card-sub); border: 1px solid var(--card-border); border-left: 3px solid var(--accent-primary); padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; cursor: pointer;" onclick="openTaskInReview('${t.id}')">
+          <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-primary);">${t.title}</div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Status: <span class="badge-tag green">${t.status}</span> | OCC: <code>v${t.version || 1}</code></div>
         </div>
       `).join('')}
     `;
@@ -207,25 +225,27 @@ function renderCommandCenter() {
   const opContainer = document.getElementById('ccOperatorProfiles');
   if (opContainer) {
     opContainer.innerHTML = `
-      <div style="background: #1e293b; border: 1px solid #334155; padding: 12px; border-radius: 8px; margin-bottom: 10px; cursor: pointer;" onclick="alert('Selected Operator: Aryan Sharma (Lead Developer)')">
+      <div style="background: var(--bg-card-sub); border: 1px solid var(--card-border); padding: 12px; border-radius: 6px; margin-bottom: 10px; cursor: pointer;" onclick="alert('Selected Operator: Aryan Sharma (Lead Developer)')">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: 700; color: #f8fafc; font-size: 0.88rem;">Aryan Sharma</span>
-          <span style="color: #f59e0b; font-weight: 700; font-size: 0.75rem;">🔥 7 Days Streak</span>
+          <span style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">Aryan Sharma</span>
+          <span class="badge-tag orange">🔥 7 Days Streak</span>
         </div>
-        <div style="font-size: 0.74rem; color: #818cf8; margin: 3px 0 8px 0;">Lead Developer | Level 2 (14 tasks verified)</div>
-        <div style="display: flex; gap: 4px;">
-          <span style="background: rgba(99,102,241,0.2); color: #c7d2fe; font-size: 0.65rem; padding: 2px 6px; border-radius: 8px;">First Review 🏆</span>
-          <span style="background: rgba(99,102,241,0.2); color: #c7d2fe; font-size: 0.65rem; padding: 2px 6px; border-radius: 8px;">Speed Auditor ⚡</span>
+        <div style="font-size: 0.74rem; color: var(--text-secondary); margin: 4px 0 8px 0;">Lead Developer & Architect • Level 2 (14 tasks)</div>
+        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+          <span class="badge-tag yellow">First Review 🏆</span>
+          <span class="badge-tag orange">Speed Auditor ⚡</span>
+          <span class="badge-tag purple">100 Tasks Certified 👑</span>
         </div>
       </div>
-      <div style="background: #1e293b; border: 1px solid #334155; padding: 12px; border-radius: 8px; cursor: pointer;" onclick="alert('Selected Operator: Atul Yadav (Testing & Security)')">
+      <div style="background: var(--bg-card-sub); border: 1px solid var(--card-border); padding: 12px; border-radius: 6px; cursor: pointer;" onclick="alert('Selected Operator: Atul Yadav (Testing & Security)')">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: 700; color: #f8fafc; font-size: 0.88rem;">Atul Yadav</span>
-          <span style="color: #f59e0b; font-weight: 700; font-size: 0.75rem;">🔥 3 Days Streak</span>
+          <span style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">Atul Yadav</span>
+          <span class="badge-tag orange">🔥 3 Days Streak</span>
         </div>
-        <div style="font-size: 0.74rem; color: #818cf8; margin: 3px 0 8px 0;">Testing & Security | Level 1 (8 tasks verified)</div>
-        <div>
-          <span style="background: rgba(99,102,241,0.2); color: #c7d2fe; font-size: 0.65rem; padding: 2px 6px; border-radius: 8px;">First Review 🏆</span>
+        <div style="font-size: 0.74rem; color: var(--text-secondary); margin: 4px 0 8px 0;">Code Quality Testing & Security • Level 1 (8 tasks)</div>
+        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+          <span class="badge-tag yellow">First Review 🏆</span>
+          <span class="badge-tag green">Zero-Error Champion 🛡️</span>
         </div>
       </div>
     `;
@@ -235,17 +255,17 @@ function renderCommandCenter() {
   const tmplContainer = document.getElementById('ccPipelineTemplates');
   if (tmplContainer) {
     tmplContainer.innerHTML = `
-      <div style="background: #1e293b; border: 1px solid #334155; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
-        <div style="font-weight: 700; color: #f8fafc; font-size: 0.85rem;">MNC Priority Alert Template</div>
-        <div style="font-size: 0.72rem; color: #818cf8; margin-bottom: 6px;">Trigger: Webhook Gateway 🛡️</div>
-        <div style="font-size: 0.68rem; color: #94a3b8; margin-bottom: 8px;">• 1. HMAC Nonce Verify 🛡️<br/>• 2. Cognitive AI Pre-Audit 🧠<br/>• 3. Teams Adaptive Card 💬</div>
-        <button class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 10px; width: 100%;" onclick="triggerPipelineTemplate('MNC')">⚡ Trigger Pipeline</button>
-      </div>
-      <div style="background: #1e293b; border: 1px solid #334155; padding: 12px; border-radius: 8px;">
-        <div style="font-weight: 700; color: #f8fafc; font-size: 0.85rem;">Academic Lab Provisioning Pipeline</div>
-        <div style="font-size: 0.72rem; color: #818cf8; margin-bottom: 6px;">Trigger: Academic Portal 🎓</div>
-        <div style="font-size: 0.68rem; color: #94a3b8; margin-bottom: 8px;">• 1. HMAC Verify 🛡️<br/>• 2. AI Pre-Audit 🧠<br/>• 3. Teams Card 💬<br/>• 4. SHA-256 Ledger 📊</div>
+      <div style="background: var(--bg-card-sub); border: 1px solid var(--card-border); padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+        <div style="font-weight: 700; color: var(--text-primary); font-size: 0.84rem;">Chemistry Lab Logistics Pipeline</div>
+        <div style="font-size: 0.72rem; color: var(--accent-primary); margin-bottom: 4px;">Trigger: Academic Lab Requisition Portal 🧪</div>
+        <div style="font-size: 0.70rem; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4;">• 1. HMAC Nonce Verify 🛡️<br/>• 2. Cognitive AI Pre-Audit 🧠<br/>• 3. Teams Adaptive Card 💬<br/>• 4. SHA-256 Ledger Seal 📊</div>
         <button class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 10px; width: 100%;" onclick="triggerPipelineTemplate('Academic')">⚡ Trigger Pipeline</button>
+      </div>
+      <div style="background: var(--bg-card-sub); border: 1px solid var(--card-border); padding: 12px; border-radius: 6px;">
+        <div style="font-weight: 700; color: var(--text-primary); font-size: 0.84rem;">Emergency Security Escalation Pipeline</div>
+        <div style="font-size: 0.72rem; color: #dc2626; margin-bottom: 4px;">Trigger: AWS GuardDuty Ingestion 🚨</div>
+        <div style="font-size: 0.70rem; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4;">• 1. HMAC Verify 🛡️<br/>• 2. Biometric & OTP Gate 🔐<br/>• 3. SendGrid Dispatch 📧<br/>• 4. SHA-256 Audit Seal 📊</div>
+        <button class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 10px; width: 100%;" onclick="triggerPipelineTemplate('MNC')">⚡ Trigger Pipeline</button>
       </div>
     `;
   }
@@ -340,63 +360,74 @@ function renderTaskDetail() {
   detailBody.innerHTML = `
     <div class="risk-alert-box ${riskClass}">
       <span>🚨 <b>${task.risk_level} RISK PRE-AUDIT EVALUATION</b></span>
-      <span>Confidence: <b>${confPct}%</b></span>
+      <span>AI Confidence: <b>${confPct}%</b></span>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px;">
-      <div style="background: var(--bg-card-sub); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--card-border);">
-        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700;">CATEGORY</div>
-        <div style="font-size: 0.85rem; font-weight: 700;">${task.category}</div>
-      </div>
-      <div style="background: var(--bg-card-sub); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--card-border);">
-        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700;">PRIORITY</div>
-        <div style="font-size: 0.85rem; font-weight: 700;">${task.priority.toUpperCase()}</div>
-      </div>
-      <div style="background: var(--bg-card-sub); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--card-border);">
-        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700;">STATUS</div>
-        <div style="font-size: 0.85rem; font-weight: 700; color: #10b981;">${task.status}</div>
-      </div>
-    </div>
+    <!-- Notion Property Table -->
+    <table class="prop-table">
+      <tr>
+        <td class="prop-label"><span>📂</span> Category</td>
+        <td><span class="badge-tag indigo">${task.category}</span></td>
+      </tr>
+      <tr>
+        <td class="prop-label"><span>🎯</span> Priority</td>
+        <td><span class="badge-tag ${task.priority === 'critical' ? 'red' : (task.priority === 'high' ? 'orange' : 'blue')}">${task.priority.toUpperCase()}</span></td>
+      </tr>
+      <tr>
+        <td class="prop-label"><span>🟡</span> Status</td>
+        <td><span class="badge-tag ${task.status === 'Approved' ? 'green' : (task.status === 'Rejected' ? 'red' : (task.status.includes('DLQ') ? 'purple' : 'yellow'))}">${task.status}</span></td>
+      </tr>
+      <tr>
+        <td class="prop-label"><span>💰</span> Budget</td>
+        <td><span class="badge-tag gray">${task.budget || '₹45,000 / $0'}</span></td>
+      </tr>
+      <tr>
+        <td class="prop-label"><span>🔄</span> OCC Version</td>
+        <td><span class="badge-tag gray">v${task.version || 1}</span></td>
+      </tr>
+    </table>
 
-    <div style="margin-bottom: 14px;">
-      <div class="form-label">Task Details & Scope</div>
-      <div style="background: var(--bg-card-sub); padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; border-left: 3px solid var(--accent-primary); line-height: 1.5;">
+    <div style="margin-bottom: 12px;">
+      <div class="form-label">Task Details & Inbound Request</div>
+      <div style="background: var(--bg-card-sub); padding: 10px 12px; border-radius: 6px; font-size: 0.84rem; border-left: 3px solid var(--accent-primary); line-height: 1.45; color: var(--text-primary);">
         ${task.details}
       </div>
     </div>
 
-    <!-- Stage 2 Gap: The AI Reasoning Ledger Property -->
-    <div style="background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.35); padding: 12px 14px; border-radius: 8px; margin-bottom: 14px;">
-      <div style="font-weight: 700; font-size: 0.82rem; color: #c7d2fe; margin-bottom: 5px; display: flex; align-items: center; gap: 6px;">
-        <span>🧠</span> <span>AI Reasoning Ledger (Natural Language Thought Process)</span>
-      </div>
-      <div style="font-size: 0.80rem; color: #e2e8f0; line-height: 1.5;">
-        ${task.ai_reasoning_ledger || `Assessed as ${task.risk_level} risk (${confPct}% confidence) under '${task.category}'. Pre-compiled dispatch draft staged for human review.`}
+    <!-- Stage 2: AI Reasoning Ledger Callout -->
+    <div class="notion-callout indigo" style="margin-bottom: 12px;">
+      <span class="callout-icon">🧠</span>
+      <div class="callout-content">
+        <div class="callout-title">AI Reasoning Ledger (Explainable Pre-Audit)</div>
+        <div>${task.ai_reasoning_ledger || `Assessed as ${task.risk_level} risk (${confPct}% confidence) under '${task.category}'. Pre-compiled dispatch draft staged for human review.`}</div>
       </div>
     </div>
 
-    <div style="margin-bottom: 14px;">
-      <div class="form-label">🔍 LangChain Chain-of-Thought Reasoning Trace</div>
-      <div style="background: var(--bg-card-sub); padding: 10px 14px; border-radius: 6px; font-size: 0.8rem;">
-        ${(task.reasoning_trace || []).map(s => `<div style="margin-bottom: 4px; color: var(--text-secondary);">${s}</div>`).join('')}
+    <!-- Notion Toggle: Reasoning Trace -->
+    <details class="notion-toggle" style="margin-bottom: 12px;">
+      <summary>🔍 LangChain Chain-of-Thought Reasoning Trace (${(task.reasoning_trace || []).length} steps)</summary>
+      <div class="toggle-content">
+        ${(task.reasoning_trace || []).map(s => `<div style="margin-bottom: 4px;">• ${s}</div>`).join('')}
       </div>
-    </div>
+    </details>
 
     <!-- Stage 3 HITL: Draft & Diff Staging Box -->
-    <div style="background: #1e293b; border: 1px solid #475569; padding: 14px; border-radius: 8px; margin-bottom: 16px;">
-      <div style="font-weight: 700; font-size: 0.85rem; color: #818cf8; margin-bottom: 6px;">📝 Stage 3 HITL: Proposed AI Draft & Staging Editor</div>
-      <div style="font-size: 0.72rem; color: #94a3b8; margin-bottom: 10px;">Human operators can refine or completely rewrite the AI draft before final approval. Outbound dispatches will send the edited version.</div>
+    <div style="background: var(--bg-card-sub); border: 1px solid var(--card-border); padding: 12px; border-radius: 6px; margin-bottom: 14px;">
+      <div style="font-weight: 700; font-size: 0.84rem; color: var(--accent-primary); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+        <span>📝</span> <span>Stage 3 HITL: Proposed AI Draft & Human Override</span>
+      </div>
+      <div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 8px;">Human operators can review or edit the AI draft before approval. Outbound dispatches send the human-edited version.</div>
       
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
         <div>
-          <div style="font-size: 0.70rem; color: #cbd5e1; font-weight: 700; margin-bottom: 4px;">🤖 Original AI Proposed Draft:</div>
-          <div style="background: #0f172a; border: 1px solid #334155; padding: 8px 10px; border-radius: 6px; font-size: 0.75rem; color: #94a3b8; height: 90px; overflow-y: auto;">
+          <div style="font-size: 0.70rem; color: var(--text-muted); font-weight: 700; margin-bottom: 4px;">🤖 AI Pre-Compiled Draft:</div>
+          <div style="background: var(--bg-app); border: 1px solid var(--card-border); padding: 8px 10px; border-radius: 6px; font-size: 0.76rem; color: var(--text-secondary); height: 85px; overflow-y: auto;">
             ${task.proposed_ai_draft || task.draft_teams_text || 'No draft generated.'}
           </div>
         </div>
         <div>
-          <div style="font-size: 0.70rem; color: #34d399; font-weight: 700; margin-bottom: 4px;">✍️ Human Operator Staged Revision:</div>
-          <textarea id="editDraftText" class="form-control" rows="4" style="height: 90px; font-size: 0.75rem;">${task.edited_draft || task.proposed_ai_draft || task.draft_teams_text || ''}</textarea>
+          <div style="font-size: 0.70rem; color: #16a34a; font-weight: 700; margin-bottom: 4px;">✍️ Human Staged Revision:</div>
+          <textarea id="editDraftText" class="notion-textarea" style="height: 85px; min-height: 85px; font-size: 0.76rem;">${task.edited_draft || task.proposed_ai_draft || task.draft_teams_text || ''}</textarea>
         </div>
       </div>
       <button class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 10px;" onclick="saveStagedDraft()">💾 Save Staged Revision</button>
@@ -404,17 +435,20 @@ function renderTaskDetail() {
 
     <!-- Stage 5 DLQ: Diagnostic Traceback View if quarantined -->
     ${(task.status === 'DLQ: Needs Technical Review' || task.dlq_error_trace) ? `
-      <div style="background: #2d1515; border: 1px solid #ef4444; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-        <div style="font-weight: 700; color: #f87171; font-size: 0.85rem;">🚨 DEAD-LETTER QUEUE (DLQ) QUARANTINE ACTIVE</div>
-        <div style="font-size: 0.72rem; color: #fca5a5; margin: 4px 0 8px 0;">Reason: <code>${task.dlq_reason || 'Processing Exception'}</code></div>
-        <pre style="background: #1a0a0a; padding: 8px; border-radius: 6px; font-size: 0.70rem; color: #fca5a5; overflow-x: auto; max-height: 120px;">${task.dlq_error_trace || 'Traceback logged to error store.'}</pre>
-        <button class="btn btn-primary" style="font-size: 0.72rem; padding: 4px 10px; margin-top: 6px;" onclick="retriageDlqTask()">🔄 Re-Triage to 'Ready for Review'</button>
+      <div class="notion-callout red" style="margin-bottom: 14px;">
+        <span class="callout-icon">🚨</span>
+        <div class="callout-content">
+          <div class="callout-title">Dead-Letter Queue (DLQ) Quarantine Active</div>
+          <div style="margin: 4px 0 6px 0;">Reason: <code>${task.dlq_reason || 'Processing Exception'}</code></div>
+          <pre style="background: var(--bg-app); padding: 6px 8px; border-radius: 4px; font-size: 0.70rem; font-family: 'JetBrains Mono', monospace; overflow-x: auto; max-height: 100px;">${task.dlq_error_trace || 'Traceback logged to error store.'}</pre>
+          <button class="btn btn-primary" style="font-size: 0.72rem; padding: 4px 10px; margin-top: 6px;" onclick="retriageDlqTask()">🔄 Re-Triage to 'Ready for Review'</button>
+        </div>
       </div>
     ` : ''}
 
-    <div style="display: flex; gap: 10px;">
-      <button class="btn btn-primary" onclick="approveCurrentTask()" style="flex: 1;">🟢 Approve & Dispatch</button>
-      <button class="btn btn-danger" onclick="rejectCurrentTask()" style="flex: 1;">🔴 Reject Task</button>
+    <div style="display: flex; gap: 8px; margin-top: 4px;">
+      <button class="btn btn-success" onclick="approveCurrentTask()" style="flex: 1;">🟢 Approve (OCC)</button>
+      <button class="btn btn-danger" onclick="rejectCurrentTask()" style="flex: 1;">🔴 Reject</button>
       <button class="btn btn-secondary" onclick="simulateOccConflict()" style="flex: 1;">⚡ Test OCC Merge</button>
     </div>
   `;
@@ -665,13 +699,43 @@ function submitRegistration() {
 // 7. WEBHOOK SIMULATOR
 // ==============================================================================
 const webhookPresets = {
-  academic: {
-    event_id: "evt_9a8b7c6d5e4f",
-    source: "Academic Registration Portal",
+  lab_provisions: {
+    event_id: "evt_chem_lab_0088",
+    source: "Chemistry Dept Requisitions",
     timestamp: Math.floor(Date.now() / 1000),
     payload: {
-      task_title: "Provisions for Lab Group B",
-      details: "Register 15 student seats and dispatch welcome packages with syllabus attachments.",
+      task_title: "Chemistry Lab Reagents & Glassware Requisition",
+      details: "Urgent purchase of 5L Hydrochloric Acid (AR Grade), 10 Borosilicate Beakers (500ml), and 20 Pipettes for Organic Lab Group C. Total estimated invoice: ₹45,000.",
+      priority: "high"
+    }
+  },
+  event_permissions: {
+    event_id: "evt_fest_auditorium_042",
+    source: "College Student Council Portal",
+    timestamp: Math.floor(Date.now() / 1000),
+    payload: {
+      task_title: "Tech Fest 2026: Main Auditorium Sound & AV Clearance",
+      details: "Requesting approval for late-night stage lighting, sound system vendor setup, and 800-seat auditorium access for Annual Hackathon opening keynote.",
+      priority: "normal"
+    }
+  },
+  voice_triage: {
+    event_id: "evt_voice_hinglish_009",
+    source: "Mobile Voice Memo (WhatsApp / Notion Mic)",
+    timestamp: Math.floor(Date.now() / 1000),
+    payload: {
+      task_title: "Robotics Club Component Order (Voice Note)",
+      details: "Bhai robotics club ke lab room 302 ke liye 5 Arduino Uno boards, 2 LiPo battery packs, aur 10 ultrasonic sensors urgently mangwa do. Budget around ₹8,500.",
+      priority: "normal"
+    }
+  },
+  stationary_procurement: {
+    event_id: "evt_campus_xerox_501",
+    source: "Campus Store Procurement",
+    timestamp: Math.floor(Date.now() / 1000),
+    payload: {
+      task_title: "Campus Xerox & Exam Cell: Bulk Paper & Toner Dispatch",
+      details: "Mid-semester exam prep: 50 reams A4 75GSM copier paper and 4 HP Laser cartridge refills. Vendor dispatch requested for Friday morning.",
       priority: "normal"
     }
   },
@@ -681,18 +745,8 @@ const webhookPresets = {
     timestamp: Math.floor(Date.now() / 1000),
     payload: {
       task_title: "Security Incident: Unauthorized Root Access Attempt",
-      details: "Detected 40 failed SSH attempts from external subnet. Emergency revoke API keys.",
+      details: "Detected 40 failed SSH attempts from external subnet. Emergency revoke API keys and rotate TLS certificates immediately.",
       priority: "critical"
-    }
-  },
-  infra: {
-    event_id: "evt_infra_8821",
-    source: "DevOps CI/CD Pipeline",
-    timestamp: Math.floor(Date.now() / 1000),
-    payload: {
-      task_title: "Database Migration & Firewall Rules Update",
-      details: "Apply migration script 042_schema_v2.sql and open port 5432.",
-      priority: "high"
     }
   }
 };
@@ -700,7 +754,7 @@ const webhookPresets = {
 let seenFingerprints = new Set();
 
 function loadWebhookPreset(key) {
-  const data = webhookPresets[key] || webhookPresets.academic;
+  const data = webhookPresets[key] || webhookPresets.lab_provisions;
   const area = document.getElementById('webhookJsonArea');
   const sig = document.getElementById('calculatedHmacInput');
   if (area) area.value = JSON.stringify(data, null, 2);
@@ -1032,31 +1086,31 @@ function renderDlqGallery() {
   
   if (dlqTasksData.length === 0) {
     grid.innerHTML = `
-      <div style="grid-column: 1 / -1; padding: 30px; text-align: center; background: #0f172a; border-radius: 8px; border: 1px dashed #334155;">
-        <span style="font-size: 2rem;">✅</span>
-        <div style="font-weight: 700; color: #10b981; margin-top: 8px;">Dead-Letter Queue is Clean</div>
-        <div style="font-size: 0.78rem; color: #64748b; margin-top: 4px;">Zero quarantined tasks. All background cycles operating nominally.</div>
+      <div style="grid-column: 1 / -1; padding: 24px; text-align: center; background: var(--bg-card-sub); border-radius: 6px; border: 1px dashed var(--card-border);">
+        <span style="font-size: 1.8rem;">✅</span>
+        <div style="font-weight: 700; color: #16a34a; margin-top: 6px; font-size: 0.9rem;">Dead-Letter Queue is Clean</div>
+        <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">Zero quarantined tasks. All background cycles operating nominally.</div>
       </div>
     `;
     return;
   }
 
   grid.innerHTML = dlqTasksData.map(t => `
-    <div style="background: #1e1515; border: 1px solid #ef4444; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);">
+    <div style="background: var(--tag-red-bg); border: 1px solid var(--tag-red-border); border-radius: 6px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
       <div>
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-          <span style="font-weight: 700; color: #f87171; font-size: 0.95rem;">${t.title}</span>
-          <span class="badge-tag" style="background: rgba(239,68,68,0.25); color: #f87171; border: 1px solid #ef4444; font-size: 0.68rem; font-weight: 700;">DLQ QUARANTINED</span>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+          <span style="font-weight: 700; color: var(--tag-red-text); font-size: 0.9rem;">${t.title}</span>
+          <span class="badge-tag red">DLQ QUARANTINED</span>
         </div>
-        <div style="font-size: 0.8rem; color: #fca5a5; margin-bottom: 8px;">
+        <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 6px;">
           Reason: <b>${t.dlq_reason || 'Processing Exception'}</b>
         </div>
-        <div style="font-size: 0.75rem; color: #cbd5e1; margin-bottom: 4px; font-weight: 600;">Error Traceback:</div>
-        <pre style="background: #0a0505; color: #fca5a5; padding: 10px; border-radius: 6px; font-size: 0.72rem; max-height: 120px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; border: 1px solid rgba(239,68,68,0.3);">${t.dlq_error_trace || 'Unspecified runtime exception'}</pre>
+        <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 3px; font-weight: 600;">Error Traceback:</div>
+        <pre style="background: var(--bg-app); color: var(--tag-red-text); padding: 8px; border-radius: 4px; font-size: 0.70rem; max-height: 110px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; border: 1px solid var(--tag-red-border);">${t.dlq_error_trace || 'Unspecified runtime exception'}</pre>
       </div>
-      <div style="margin-top: 14px; display: flex; gap: 8px;">
-        <button class="btn btn-primary" style="flex: 1; font-size: 0.78rem; padding: 7px;" onclick="resolveDlqTaskFromGallery('${t.id}')">🔄 Resolve & Re-Triage</button>
-        <button class="btn btn-secondary" style="font-size: 0.78rem; padding: 7px;" onclick="openTaskInReview('${t.id}')">🔍 Inspect</button>
+      <div style="margin-top: 12px; display: flex; gap: 6px;">
+        <button class="btn btn-primary" style="flex: 1; font-size: 0.75rem; padding: 5px 8px;" onclick="resolveDlqTaskFromGallery('${t.id}')">🔄 Re-Triage to Active</button>
+        <button class="btn btn-secondary" style="font-size: 0.75rem; padding: 5px 8px;" onclick="openTaskInReview('${t.id}')">🔍 Inspect</button>
       </div>
     </div>
   `).join('');

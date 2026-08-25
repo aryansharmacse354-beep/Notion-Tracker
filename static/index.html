@@ -111,15 +111,23 @@
       <!-- TOP NAVBAR -->
       <header class="top-navbar">
         <div class="top-nav-left">
-          <h2 class="view-title" id="currentViewHeading">HITL Task Approvals & Cognitive Audit Panel</h2>
-          <span class="badge-tag indigo">Zero-Trust Pipeline Active</span>
+          <div class="breadcrumbs">
+            <span style="font-size: 1rem;">🏠</span>
+            <span>Notion Tracker</span>
+            <span style="color: var(--text-muted);">/</span>
+            <span class="crumb-current" id="currentViewHeading">Operations Command Center</span>
+          </div>
+          <span class="badge-tag indigo" id="pipelineStatusBadge">Autonomous Daemon Active</span>
         </div>
         <div class="top-nav-right">
+          <button class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Light/Dark Notion Theme" id="themeToggleBtn">
+            🌙
+          </button>
           <div class="operator-chip">
             <span class="status-dot"></span>
             <span id="operatorDisplay">Aryan Sharma (Lead Developer)</span>
           </div>
-          <span class="badge-tag" style="background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid #10b981;">
+          <span class="badge-tag green">
             ⚡ Rate Limit: NOMINAL
           </span>
         </div>
@@ -129,10 +137,11 @@
            VIEW 0: OPERATIONS COMMAND CENTER & VISUAL WORKFLOW BUILDER
            ========================================================================= -->
       <section class="view-viewport active" id="view-command-center">
-        <div style="background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); padding: 12px 16px; border-radius: 10px; margin-bottom: 16px;">
-          <div style="font-size: 0.95rem; font-weight: 700; color: #c7d2fe;">🎛️ Operations Command Center & Programmable Workflow Matrix</div>
-          <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 4px;">
-            💡 <b>The Turn-Off Test</b>: Notion's native drag-and-drop database grid allows managers to position Tasks Kanban boards, Run Log ledgers, Operator Profiles, and System Health tables side-by-side. If servers are turned off, the workspace layout remains 100% structured and readable.
+        <div class="notion-callout indigo">
+          <span class="callout-icon">💡</span>
+          <div class="callout-content">
+            <div class="callout-title">The Turn-Off Test & Unified Operations Hub</div>
+            <div>Notion's native database grid allows managers to position Tasks Kanban boards, Run Log ledgers, and Operator Profiles side-by-side. When servers are off, the workspace remains 100% structured and human-readable.</div>
           </div>
         </div>
 
@@ -347,15 +356,22 @@
       <section class="view-viewport" id="view-dlq">
         <div class="scroll-panel" style="height: 100%;">
           <div class="panel-header">
-            <h3><span>🚨</span> Dead-Letter Queue (DLQ) — Industrial Fault Isolation & Traceback Gallery</h3>
-            <button class="btn btn-secondary" onclick="injectDlqCorruptSample()">➕ Simulate Corrupt Ingestion</button>
+            <h3><span>🚨</span> Dead-Letter Queue (DLQ) — Fault Isolation & Traceback Gallery</h3>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-danger" onclick="injectDlqCorruptSample()">⚠️ Simulate Malformed Crash</button>
+              <button class="btn btn-secondary" onclick="loadDlqTasks()">🔄 Refresh DLQ Store</button>
+            </div>
           </div>
           <div class="panel-body">
-            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 12px 16px; border-radius: 10px; margin-bottom: 16px;">
-              <div style="font-size: 0.88rem; font-weight: 700; color: #fca5a5;">🛡️ Stage 5 Enterprise Observability: If payloads throw unhandled schema or execution errors, the backend isolates them into this dedicated 'Needs Technical Review' quarantine gallery with full tracebacks rather than crashing silently.</div>
+            <div class="notion-callout red">
+              <span class="callout-icon">🛡️</span>
+              <div class="callout-content">
+                <div class="callout-title">Stage 5 Fault Isolation (Dead-Letter Queue)</div>
+                <div>When payloads throw unhandled schema or processing exceptions, the backend isolates them into this dedicated 'Needs Technical Review' quarantine gallery with full tracebacks rather than crashing silently.</div>
+              </div>
             </div>
 
-            <div id="dlqGalleryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px;">
+            <div id="dlqGalleryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px;">
               <!-- Rendered via renderDlqGallery() in app.js -->
             </div>
           </div>
@@ -373,11 +389,13 @@
           </div>
           <div class="panel-body">
             <div class="form-group">
-              <label class="form-label">Payload Preset</label>
+              <label class="form-label">Payload Preset (Real-World Indian College & Operations)</label>
               <select id="presetSelect" class="form-control" onchange="loadWebhookPreset(this.value)">
-                <option value="academic">Academic Registration (Normal Risk)</option>
-                <option value="security">Emergency Security Escalation (Critical Risk)</option>
-                <option value="infra">Infrastructure Provisioning (High Risk)</option>
+                <option value="lab_provisions" selected>🧪 Chemistry Lab Reagents & Glassware Requisition (₹45,000)</option>
+                <option value="event_permissions">🎪 College Tech Fest Auditorium Audio-Visual Clearance</option>
+                <option value="voice_triage">🎙️ Hinglish Voice Note: Robotics Club Arduino & LiPo Batteries</option>
+                <option value="stationary_procurement">🛒 Campus Stationary & Xerox Shop Bulk Paper Order</option>
+                <option value="security">🚨 Emergency Root Access Key Compromise (CRITICAL Risk Gate)</option>
               </select>
             </div>
             <div class="form-group">
@@ -500,29 +518,6 @@
         </div>
       </section>
 
-      <!-- =========================================================================
-           VIEW 7: DEAD-LETTER QUEUE (DLQ) GALLERY VIEW
-           ========================================================================= -->
-      <section class="view-viewport" id="view-dlq">
-        <div class="scroll-panel" style="height: 100%;">
-          <div class="panel-header">
-            <h3><span>🚨</span> Dead-Letter Queue (DLQ) — Industrial Fault Isolation</h3>
-            <div style="display: flex; gap: 10px;">
-              <button class="btn btn-danger" onclick="seedSampleDlqTask()">⚠️ Simulate Malformed Crash Ingest</button>
-              <button class="btn btn-secondary" onclick="loadDlqTasks()">🔄 Refresh DLQ Store</button>
-            </div>
-          </div>
-          <div class="panel-body">
-            <div class="risk-alert-box critical" style="margin-bottom: 16px;">
-              <span>🛡️ <b>Stage 5 Enterprise Observability:</b> If payloads throw unhandled schema or execution errors, the backend isolates them into this dedicated 'Needs Technical Review' quarantine gallery with full tracebacks rather than crashing silently.</span>
-            </div>
-            
-            <div id="dlqGalleryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px;">
-              <!-- Rendered via JS -->
-            </div>
-          </div>
-        </div>
-      </section>
 
       <!-- =========================================================================
            VIEW 8: VOICE MEMO & NATURAL LANGUAGE @AI COMMENT AGENTS
