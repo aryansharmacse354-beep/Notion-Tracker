@@ -12,9 +12,16 @@ import time
 import webbrowser
 import os
 
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
+
 def launch():
     print("=" * 65)
-    print(" 🚀 LAUNCHING NOTION TRACKER ENTERPRISE PLATFORM")
+    print(" [*] LAUNCHING NOTION TRACKER ENTERPRISE PLATFORM")
     print("=" * 65)
 
     # 1. Clean up stale ports
@@ -32,7 +39,7 @@ def launch():
     time.sleep(1)
 
     # 2. Start FastAPI on 8000
-    print("[*] Starting Web App & Gateway on http://127.0.0.1:8000...")
+    print("[*] Starting Web App and Gateway on http://127.0.0.1:8000...")
     p_gw = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "webhook_gateway:app", "--host", "127.0.0.1", "--port", "8000"],
     )
@@ -50,23 +57,27 @@ def launch():
     )
 
     # 5. Wait for servers to spin up, then open browser
-    print("[*] Waiting 2 seconds for services to bind...")
+    print("[*] Waiting 2.5 seconds for services to bind...")
     time.sleep(2.5)
 
     print("[*] Automatically opening browser...")
-    webbrowser.open("http://localhost:8000")
-    webbrowser.open("http://localhost:8501")
+    try:
+        webbrowser.open("http://localhost:8000")
+        webbrowser.open("http://localhost:8501")
+    except Exception as e:
+        print(f"[!] Browser open notice: {e}")
 
     print("\n" + "=" * 65)
-    print(" ✅ NOTION TRACKER IS RUNNING!")
-    print(" • Single-Page Web App: http://localhost:8000")
-    print(" • Streamlit Portal:    http://localhost:8501")
-    print(" • OpenAPI Docs:        http://localhost:8000/docs")
+    print(" [OK] NOTION TRACKER IS RUNNING!")
+    print(" * Single-Page Web App: http://localhost:8000")
+    print(" * Streamlit Portal:    http://localhost:8501")
+    print(" * OpenAPI Docs:        http://localhost:8000/docs")
     print("=" * 65 + "\n")
 
     try:
-        p_gw.wait()
-    except KeyboardInterrupt:
+        while True:
+            time.sleep(2)
+    except (KeyboardInterrupt, SystemExit):
         print("\n[*] Stopping all services...")
         p_gw.terminate()
         p_daemon.terminate()
