@@ -75,23 +75,125 @@ const viewHeadings = {
   'view-audit': 'Industrial SHA-256 Cryptographic Audit Ledger'
 };
 
+function quickApproveTask(taskId, e) {
+  if (e) e.stopPropagation();
+  const task = tasksData.find(t => t.id === taskId);
+  if (!task) return;
+
+  task.status = 'Approved';
+  task.version = (task.version || 1) + 1;
+  task.updated_at = Date.now() / 1000;
+
+  // Add audit log record
+  auditLogsData.unshift({
+    id: `log_${Date.now()}`,
+    task_id: task.id,
+    action: 'QUICK_APPROVE',
+    operator: 'Aryan Sharma',
+    outcome: 'SUCCESS',
+    timestamp: Date.now() / 1000,
+    signature: '5c87332713dce12df85c7f8a88f89d0533568cfb19b92c84dd4a8d993012f35c'
+  });
+
+  renderCommandCenter();
+  renderTaskList();
+  renderBatchRows();
+  renderLedger();
+  updateMetrics();
+
+  alert(`✅ [Command Center] Task '${task.title}' approved successfully (OCC v${task.version})!`);
+}
+
+function triggerPipelineTemplate(templateName) {
+  const newId = `task_pipe_${Date.now().toString().slice(-6)}`;
+  let newTask;
+
+  if (templateName === 'MNC') {
+    newTask = {
+      id: newId,
+      title: 'Urgent: Infrastructure Security Certificate Renewal',
+      details: 'Automated certificate expiry detected on gateway cluster. Rotate TLS keypair and re-sign tokens.',
+      priority: 'high',
+      category: 'Security & Identity',
+      status: 'Ready for Review',
+      risk_level: 'HIGH',
+      confidence_score: 0.94,
+      version: 1,
+      reasoning_trace: [
+        '[Step 1] Ingested automated certificate monitoring trigger.',
+        '[Step 2] AI Pre-Audit: Identified HIGH risk privilege operation.',
+        '[Step 3] Pre-compiled Teams Adaptive Card notification.'
+      ],
+      draft_teams_text: '🔐 **Security Certificate Renewal Notice**\nUrgent operator approval required.',
+      source: 'MNC Priority Pipeline'
+    };
+  } else {
+    newTask = {
+      id: newId,
+      title: 'Provisions for Physics Lab Group C',
+      details: 'Dispatch 20 syllabus kits and laboratory hardware components to Science Block 3.',
+      priority: 'normal',
+      category: 'Academic Registration',
+      status: 'Ready for Review',
+      risk_level: 'LOW',
+      confidence_score: 0.89,
+      version: 1,
+      reasoning_trace: [
+        '[Step 1] Ingested academic portal registration manifest.',
+        '[Step 2] AI Pre-Audit: Categorized as standard routine provisioning.',
+        '[Step 3] Synthesized outbound distribution draft.'
+      ],
+      draft_teams_text: '📋 **Lab Provisions Group C**\nSyllabus and kit dispatch ready for authorization.',
+      source: 'Academic Registration Pipeline'
+    };
+  }
+
+  tasksData.unshift(newTask);
+  renderCommandCenter();
+  renderTaskList();
+  renderBatchRows();
+  updateMetrics();
+
+  alert(`⚡ [Pipeline Triggered] Successfully spawned '${newTask.title}' into Command Center Kanban!`);
+}
+
+function openTaskInReview(taskId) {
+  selectTask(taskId);
+  switchView('view-hitl', document.querySelector('[data-view="view-hitl"]'));
+}
+
 function renderCommandCenter() {
   // 1. Render Tasks Kanban Board
   const kanban = document.getElementById('ccTasksKanban');
   if (kanban) {
+    const readyTasks = tasksData.filter(t => t.status === 'Ready for Review');
+    const dispatchedTasks = tasksData.filter(t => t.status !== 'Ready for Review');
+
     kanban.innerHTML = `
-      <div style="font-size: 0.8rem; font-weight: 700; color: #f59e0b; margin-bottom: 6px;">● Ready for Review (${tasksData.filter(t => t.status === 'Ready for Review').length})</div>
-      ${tasksData.filter(t => t.status === 'Ready for Review').map(t => `
-        <div style="background: #1e293b; border-left: 3px solid ${t.risk_level === 'CRITICAL' ? '#ef4444' : '#10b981'}; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px;">
-          <div style="font-size: 0.8rem; font-weight: 700; color: #f8fafc;">${t.title}</div>
-          <div style="font-size: 0.7rem; color: #94a3b8;">Risk: <b>${t.risk_level}</b> | OCC: <code>v${t.version || 1}</code></div>
+      <div style="font-size: 0.8rem; font-weight: 700; color: #f59e0b; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+        <span>● Ready for Review (${readyTasks.length})</span>
+        <span style="font-size: 0.7rem; color: #94a3b8;">Click card to inspect</span>
+      </div>
+      ${readyTasks.length === 0 ? '<div style="font-size: 0.75rem; color: #64748b; padding: 10px; text-align: center;">No pending review tasks.</div>' : ''}
+      ${readyTasks.map(t => `
+        <div style="background: #1e293b; border-left: 3px solid ${t.risk_level === 'CRITICAL' ? '#ef4444' : (t.risk_level === 'HIGH' ? '#f59e0b' : '#10b981')}; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: transform 0.15s ease;" onclick="openTaskInReview('${t.id}')">
+          <div style="font-size: 0.82rem; font-weight: 700; color: #f8fafc;">${t.title}</div>
+          <div style="font-size: 0.70rem; color: #94a3b8; margin: 4px 0 8px 0; display: flex; justify-content: space-between;">
+            <span>Risk: <b style="color: ${t.risk_level === 'CRITICAL' ? '#ef4444' : (t.risk_level === 'HIGH' ? '#f59e0b' : '#10b981')};">${t.risk_level}</b></span>
+            <span>OCC: <code>v${t.version || 1}</code></span>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn btn-primary" style="font-size: 0.70rem; padding: 3px 8px;" onclick="quickApproveTask('${t.id}', event)">✓ Quick Approve</button>
+            <button class="btn btn-secondary" style="font-size: 0.70rem; padding: 3px 8px;" onclick="openTaskInReview('${t.id}')">🔍 Review</button>
+          </div>
         </div>
       `).join('')}
-      <div style="font-size: 0.8rem; font-weight: 700; color: #6366f1; margin: 10px 0 6px 0;">● Dispatched & Approved (${tasksData.filter(t => t.status !== 'Ready for Review').length})</div>
-      ${tasksData.filter(t => t.status !== 'Ready for Review').map(t => `
-        <div style="background: #0f172a; border-left: 3px solid #6366f1; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px;">
+      
+      <div style="font-size: 0.8rem; font-weight: 700; color: #6366f1; margin: 12px 0 6px 0;">● Dispatched & Approved (${dispatchedTasks.length})</div>
+      ${dispatchedTasks.map(t => `
+        <div style="background: #0f172a; border-left: 3px solid #6366f1; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; cursor: pointer;" onclick="openTaskInReview('${t.id}')">
           <div style="font-size: 0.8rem; font-weight: 700; color: #cbd5e1;">${t.title}</div>
-          <div style="font-size: 0.7rem; color: #64748b;">Status: <b>${t.status}</b></div>
+          <div style="font-size: 0.7rem; color: #64748b; margin-top: 2px;">Status: <b style="color: #818cf8;">${t.status}</b> | OCC: <code>v${t.version || 1}</code></div>
         </div>
       `).join('')}
     `;
@@ -101,25 +203,25 @@ function renderCommandCenter() {
   const opContainer = document.getElementById('ccOperatorProfiles');
   if (opContainer) {
     opContainer.innerHTML = `
-      <div style="background: #1e293b; border: 1px solid #334155; padding: 10px; border-radius: 8px; margin-bottom: 8px;">
+      <div style="background: #1e293b; border: 1px solid #334155; padding: 12px; border-radius: 8px; margin-bottom: 10px; cursor: pointer;" onclick="alert('Selected Operator: Aryan Sharma (Lead Developer)')">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: 700; color: #f8fafc; font-size: 0.85rem;">Aryan Sharma</span>
-          <span style="color: #f59e0b; font-weight: 700; font-size: 0.75rem;">🔥 7 Days</span>
+          <span style="font-weight: 700; color: #f8fafc; font-size: 0.88rem;">Aryan Sharma</span>
+          <span style="color: #f59e0b; font-weight: 700; font-size: 0.75rem;">🔥 7 Days Streak</span>
         </div>
-        <div style="font-size: 0.72rem; color: #818cf8; margin: 2px 0 6px 0;">Lead Developer | Level 2 (14 tasks)</div>
-        <div>
-          <span style="background: rgba(99,102,241,0.2); color: #c7d2fe; font-size: 0.65rem; padding: 1px 5px; border-radius: 8px; margin-right: 3px;">First Review 🏆</span>
-          <span style="background: rgba(99,102,241,0.2); color: #c7d2fe; font-size: 0.65rem; padding: 1px 5px; border-radius: 8px;">Speed Auditor ⚡</span>
+        <div style="font-size: 0.74rem; color: #818cf8; margin: 3px 0 8px 0;">Lead Developer | Level 2 (14 tasks verified)</div>
+        <div style="display: flex; gap: 4px;">
+          <span style="background: rgba(99,102,241,0.2); color: #c7d2fe; font-size: 0.65rem; padding: 2px 6px; border-radius: 8px;">First Review 🏆</span>
+          <span style="background: rgba(99,102,241,0.2); color: #c7d2fe; font-size: 0.65rem; padding: 2px 6px; border-radius: 8px;">Speed Auditor ⚡</span>
         </div>
       </div>
-      <div style="background: #1e293b; border: 1px solid #334155; padding: 10px; border-radius: 8px;">
+      <div style="background: #1e293b; border: 1px solid #334155; padding: 12px; border-radius: 8px; cursor: pointer;" onclick="alert('Selected Operator: Atul Yadav (Testing & Security)')">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: 700; color: #f8fafc; font-size: 0.85rem;">Atul Yadav</span>
-          <span style="color: #f59e0b; font-weight: 700; font-size: 0.75rem;">🔥 3 Days</span>
+          <span style="font-weight: 700; color: #f8fafc; font-size: 0.88rem;">Atul Yadav</span>
+          <span style="color: #f59e0b; font-weight: 700; font-size: 0.75rem;">🔥 3 Days Streak</span>
         </div>
-        <div style="font-size: 0.72rem; color: #818cf8; margin: 2px 0 6px 0;">Testing & Security | Level 1 (8 tasks)</div>
+        <div style="font-size: 0.74rem; color: #818cf8; margin: 3px 0 8px 0;">Testing & Security | Level 1 (8 tasks verified)</div>
         <div>
-          <span style="background: rgba(99,102,241,0.2); color: #c7d2fe; font-size: 0.65rem; padding: 1px 5px; border-radius: 8px;">First Review 🏆</span>
+          <span style="background: rgba(99,102,241,0.2); color: #c7d2fe; font-size: 0.65rem; padding: 2px 6px; border-radius: 8px;">First Review 🏆</span>
         </div>
       </div>
     `;
@@ -129,19 +231,22 @@ function renderCommandCenter() {
   const tmplContainer = document.getElementById('ccPipelineTemplates');
   if (tmplContainer) {
     tmplContainer.innerHTML = `
-      <div style="background: #1e293b; border: 1px solid #334155; padding: 10px; border-radius: 8px; margin-bottom: 8px;">
+      <div style="background: #1e293b; border: 1px solid #334155; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
         <div style="font-weight: 700; color: #f8fafc; font-size: 0.85rem;">MNC Priority Alert Template</div>
-        <div style="font-size: 0.72rem; color: #818cf8;">Trigger: Webhook Gateway</div>
-        <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 4px;">• 1. HMAC Nonce Verify 🛡️<br/>• 2. Cognitive AI Pre-Audit 🧠<br/>• 3. Teams Adaptive Card 💬</div>
+        <div style="font-size: 0.72rem; color: #818cf8; margin-bottom: 6px;">Trigger: Webhook Gateway 🛡️</div>
+        <div style="font-size: 0.68rem; color: #94a3b8; margin-bottom: 8px;">• 1. HMAC Nonce Verify 🛡️<br/>• 2. Cognitive AI Pre-Audit 🧠<br/>• 3. Teams Adaptive Card 💬</div>
+        <button class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 10px; width: 100%;" onclick="triggerPipelineTemplate('MNC')">⚡ Trigger Pipeline</button>
       </div>
-      <div style="background: #1e293b; border: 1px solid #334155; padding: 10px; border-radius: 8px;">
+      <div style="background: #1e293b; border: 1px solid #334155; padding: 12px; border-radius: 8px;">
         <div style="font-weight: 700; color: #f8fafc; font-size: 0.85rem;">Academic Lab Provisioning Pipeline</div>
-        <div style="font-size: 0.72rem; color: #818cf8;">Trigger: Academic Portal</div>
-        <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 4px;">• 1. HMAC Verify 🛡️<br/>• 2. AI Pre-Audit 🧠<br/>• 3. Teams Card 💬<br/>• 4. SHA-256 Ledger 📊</div>
+        <div style="font-size: 0.72rem; color: #818cf8; margin-bottom: 6px;">Trigger: Academic Portal 🎓</div>
+        <div style="font-size: 0.68rem; color: #94a3b8; margin-bottom: 8px;">• 1. HMAC Verify 🛡️<br/>• 2. AI Pre-Audit 🧠<br/>• 3. Teams Card 💬<br/>• 4. SHA-256 Ledger 📊</div>
+        <button class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 10px; width: 100%;" onclick="triggerPipelineTemplate('Academic')">⚡ Trigger Pipeline</button>
       </div>
     `;
   }
 }
+
 
 
 function switchView(viewId, linkElement) {
