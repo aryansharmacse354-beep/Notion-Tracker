@@ -158,51 +158,6 @@ python verify_signatures.py --tamper-test
 python verify_signatures.py --otp-challenge
 ```
 
----
-
-## 🎤 5-Minute Live Pitch Presentation Script
-
-*Custom-tailored for Aryan Sharma (Lead Architect) & Atul Yadav (QA & Security Lead)*
-
----
-
-### **[Minute 0:00 – 1:00] Slide 1–2: The Problem & The Notion Pivot**
-> **Aryan (Lead Architect):**
-> *"Judges, enterprise operations today suffer from dashboard fatigue. When companies build custom internal portals, they break, require constant engineering maintenance, and fail 'The Turn-Off Test'—if the server goes down, operations freeze.*
-> *Our solution is **Notion Tracker**: we turn Notion itself into a hardened, zero-trust operational command center that non-technical managers already know and love."*
-
----
-
-### **[Minute 1:00 – 2:00] Slide 3–4: Ingestion Deduplication & AI Reasoning Ledger**
-> **Aryan (Lead Architect):**
-> *"Let’s look at Stage 1 and Stage 2 in action.*
-> *In Stage 1, our **Deduplication Fingerprinter** computes deterministic SHA-256 hashes with a 1-hour sliding window, ensuring double-clicked webhooks never waste Notion API quotas.*
-> *In Stage 2, our **AI Pre-Audit Engine** doesn't just assign a risk score—it writes a concise 1-to-2 sentence justification directly into the new **AI Reasoning Ledger** Notion property so non-technical managers understand the machine's exact thought process."*
-
----
-
-### **[Minute 2:00 – 3:00] Slide 5–6: Draft & Diff Staging & Multi-Modal Agents**
-> **Aryan (Lead Architect):**
-> *"In Stage 3, we introduce **Draft & Diff Staging**. The AI pre-generates the outbound communication, but the human operator can tweak the wording directly inside Notion. When approved, our engine dispatches the human's refined draft, not the machine output.*
-> *Furthermore, operators can simply type `@AI update budget to $4,500` or drop a voice memo `.wav` file into the page. Our Gemini 1.5 Flash agent parses the audio and executes the update with OCC 3-way merge protection."*
-
----
-
-### **[Minute 3:00 – 4:00] Slide 7–8: Zero-Trust Security, OTP Gateway & DLQ**
-> **Atul (QA & Security Lead):**
-> *"On the security front, every high-risk execution requires physical biometric and 6-digit SMS OTP verification linked to operator profiles (`IN +91`).*
-> *Under Stage 5, if a corrupt payload arrives, our system never crashes—it routes the item to our dedicated **Dead-Letter Queue (DLQ)** gallery view with high-visibility red traceback blocks.*
-> *Every single transaction is deterministically sealed into our immutable **SHA-256 Audit Ledger**, verifiable with zero dependencies."*
-
----
-
-### **[Minute 4:00 – 5:00] Slide 9–10: Live Proof & The Turn-Off Test**
-> **Aryan & Atul:**
-> *"To prove our engineering rigor, our test suite contains **35 deterministic unit tests passing at 100%**, validating database collisions, spoofing defenses, and rate limiting.*
-> *And if we turn off every Python background server right now? The Notion workspace remains 100% visual, structured, and readable.*
-> *Thank you—we are now open for questions!"*
-
----
 
 <div align="center">
   <sub>Developed with pride by <b>Team AI Experts</b> • Aryan Sharma & Atul Yadav</sub>
