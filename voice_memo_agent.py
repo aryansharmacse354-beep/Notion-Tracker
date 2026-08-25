@@ -6,9 +6,17 @@ through LangChain NLP, and writes formatted transcription blocks and state updat
 """
 
 import re
+import sys
 import time
 import logging
 from typing import Dict, Any, Tuple, Optional
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 from ai_audit_engine import AIAuditEngine
 from notion_store import default_store

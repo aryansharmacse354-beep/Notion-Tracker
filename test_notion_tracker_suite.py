@@ -1,4 +1,12 @@
 import sys
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from unittest.mock import MagicMock, patch
 
 # Ingress mock dependency injection to allow importing our custom engine modules 

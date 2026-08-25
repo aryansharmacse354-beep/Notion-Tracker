@@ -11,11 +11,19 @@ drag-and-drop customization, multi-column side-by-side database views, and 'The 
 """
 
 import os
+import sys
 import json
 import logging
 import sqlite3
 import time
 from typing import Dict, Any, Optional, List
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 try:
     import requests

@@ -9,10 +9,18 @@ Verifies zero-network, mocked enterprise components:
 Run with: python -m unittest test_tracker.py
 """
 
+import sys
 import unittest
 import time
 import json
 import copy
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 from notion_enterprise_guard import (
     TokenBucketRateLimiter,
