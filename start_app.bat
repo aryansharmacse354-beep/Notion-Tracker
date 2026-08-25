@@ -1,4 +1,4 @@
 @echo off
-title Notion Tracker Launcher
+title Notion Tracker
 cls
 python start_app.py
