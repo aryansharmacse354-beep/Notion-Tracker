@@ -368,10 +368,35 @@ function renderTaskDetail() {
       </div>
     </div>
 
-    <div style="margin-bottom: 16px;">
-      <div class="form-label">📤 Editable Outbound Teams Card Text</div>
-      <textarea id="editDraftText" class="form-control" rows="3">${task.draft_teams_text || ''}</textarea>
+    <!-- Stage 3 HITL: Draft & Diff Staging Box -->
+    <div style="background: #1e293b; border: 1px solid #475569; padding: 14px; border-radius: 8px; margin-bottom: 16px;">
+      <div style="font-weight: 700; font-size: 0.85rem; color: #818cf8; margin-bottom: 6px;">📝 Stage 3 HITL: Proposed AI Draft & Staging Editor</div>
+      <div style="font-size: 0.72rem; color: #94a3b8; margin-bottom: 10px;">Human operators can refine or completely rewrite the AI draft before final approval. Outbound dispatches will send the edited version.</div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <div>
+          <div style="font-size: 0.70rem; color: #cbd5e1; font-weight: 700; margin-bottom: 4px;">🤖 Original AI Proposed Draft:</div>
+          <div style="background: #0f172a; border: 1px solid #334155; padding: 8px 10px; border-radius: 6px; font-size: 0.75rem; color: #94a3b8; height: 90px; overflow-y: auto;">
+            ${task.proposed_ai_draft || task.draft_teams_text || 'No draft generated.'}
+          </div>
+        </div>
+        <div>
+          <div style="font-size: 0.70rem; color: #34d399; font-weight: 700; margin-bottom: 4px;">✍️ Human Operator Staged Revision:</div>
+          <textarea id="editDraftText" class="form-control" rows="4" style="height: 90px; font-size: 0.75rem;">${task.edited_draft || task.proposed_ai_draft || task.draft_teams_text || ''}</textarea>
+        </div>
+      </div>
+      <button class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 10px;" onclick="saveStagedDraft()">💾 Save Staged Revision</button>
     </div>
+
+    <!-- Stage 5 DLQ: Diagnostic Traceback View if quarantined -->
+    ${(task.status === 'DLQ: Needs Technical Review' || task.dlq_error_trace) ? `
+      <div style="background: #2d1515; border: 1px solid #ef4444; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+        <div style="font-weight: 700; color: #f87171; font-size: 0.85rem;">🚨 DEAD-LETTER QUEUE (DLQ) QUARANTINE ACTIVE</div>
+        <div style="font-size: 0.72rem; color: #fca5a5; margin: 4px 0 8px 0;">Reason: <code>${task.dlq_reason || 'Processing Exception'}</code></div>
+        <pre style="background: #1a0a0a; padding: 8px; border-radius: 6px; font-size: 0.70rem; color: #fca5a5; overflow-x: auto; max-height: 120px;">${task.dlq_error_trace || 'Traceback logged to error store.'}</pre>
+        <button class="btn btn-primary" style="font-size: 0.72rem; padding: 4px 10px; margin-top: 6px;" onclick="retriageDlqTask()">🔄 Re-Triage to 'Ready for Review'</button>
+      </div>
+    ` : ''}
 
     <div style="display: flex; gap: 10px;">
       <button class="btn btn-primary" onclick="approveCurrentTask()" style="flex: 1;">🟢 Approve & Dispatch</button>
@@ -381,13 +406,49 @@ function renderTaskDetail() {
   `;
 }
 
+function saveStagedDraft() {
+  const task = tasksData.find(t => t.id === activeTaskId);
+  if (!task) return;
+  const draftArea = document.getElementById('editDraftText');
+  if (draftArea) {
+    task.edited_draft = draftArea.value;
+    task.version = (task.version || 1) + 1;
+    logAuditEntry(task.id, "DRAFT_STAGED_BY_OPERATOR", { edited_draft: task.edited_draft });
+    alert(`✅ Staged draft revision saved for '${task.title}' (OCC v${task.version})!`);
+    renderTaskList();
+  }
+}
+
+function retriageDlqTask() {
+  const task = tasksData.find(t => t.id === activeTaskId);
+  if (!task) return;
+  task.status = "Ready for Review";
+  task.dlq_reason = "Re-triaged by Operator";
+  task.version = (task.version || 1) + 1;
+  logAuditEntry(task.id, "DLQ_RETRIAGED", { title: task.title, status: "Ready for Review" });
+  alert(`🔄 Task '${task.title}' returned to active review queue!`);
+  renderCommandCenter();
+  renderTaskList();
+  renderBatchRows();
+}
+
 function approveCurrentTask() {
   const task = tasksData.find(t => t.id === activeTaskId);
   if (!task) return;
+  const draftArea = document.getElementById('editDraftText');
+  if (draftArea) {
+    task.edited_draft = draftArea.value;
+  }
   task.status = "Approved";
   task.version = (task.version || 1) + 1;
-  logAuditEntry(task.id, "APPROVED_BY_OPERATOR", { title: task.title, status: "Approved" });
-  alert(`✓ Task '${task.title}' approved! Marked for outbound execution.`);
+  logAuditEntry(task.id, "APPROVED_BY_OPERATOR", {
+    title: task.title,
+    status: "Approved",
+    dispatched_draft: task.edited_draft || task.proposed_ai_draft || task.draft_teams_text,
+    is_human_edited: Boolean(task.edited_draft)
+  });
+  alert(`✓ Task '${task.title}' approved! Dispatched with ${task.edited_draft ? 'Human-Edited' : 'AI Proposed'} wording.`);
+  renderCommandCenter();
   renderTaskList();
   renderBatchRows();
 }
@@ -399,9 +460,11 @@ function rejectCurrentTask() {
   task.version = (task.version || 1) + 1;
   logAuditEntry(task.id, "REJECTED_BY_OPERATOR", { title: task.title, status: "Rejected" });
   alert(`✗ Task '${task.title}' rejected.`);
+  renderCommandCenter();
   renderTaskList();
   renderBatchRows();
 }
+
 
 function simulateOccConflict() {
   const task = tasksData.find(t => t.id === activeTaskId);
@@ -620,6 +683,8 @@ const webhookPresets = {
   }
 };
 
+let seenFingerprints = new Set();
+
 function loadWebhookPreset(key) {
   const data = webhookPresets[key] || webhookPresets.academic;
   const area = document.getElementById('webhookJsonArea');
@@ -629,9 +694,28 @@ function loadWebhookPreset(key) {
 }
 
 function triggerSimulatedWebhook() {
-  alert("🚀 Webhook Ingestion Request accepted (HTTP 202)! Payload analyzed by AI Pre-Audit and queued in Notion database.");
+  const area = document.getElementById('webhookJsonArea');
+  let payload = {};
+  try {
+    payload = JSON.parse(area.value);
+  } catch (e) {
+    alert("❌ Invalid JSON in payload textarea.");
+    return;
+  }
+
+  const title = payload.payload?.task_title || "Sample Task";
+  const normStr = `${title.toLowerCase()}|${payload.source || ''}`;
+  
+  if (seenFingerprints.has(normStr)) {
+    alert(`🛑 [DEDUPLICATION REJECTION: HTTP 409 Conflict]\n\nDuplicate payload submission detected for '${title}'.\nFingerprint: sha256_${btoa(normStr).slice(0, 16)}...\nDiscarded before touching Notion API to conserve rate limits.`);
+    return;
+  }
+
+  seenFingerprints.add(normStr);
+  alert(`🚀 Webhook Ingestion Request accepted (HTTP 202)!\n• Ingestion Fingerprint: sha256_${btoa(normStr).slice(0, 16)}...\n• AI Pre-Audit: Evaluated and staged for human review in Notion.`);
   loadSampleTasks();
 }
+
 
 // ==============================================================================
 // 8. 60-MINUTE DAEMON SCHEDULER

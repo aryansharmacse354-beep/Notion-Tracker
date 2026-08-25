@@ -27,6 +27,7 @@ class TaskPreAuditResult:
         draft_email_html: str,
         draft_teams_text: str,
         security_flags: List[str],
+        proposed_ai_draft: Optional[str] = None,
     ):
         self.risk_level = risk_level  # "LOW", "MEDIUM", "HIGH", "CRITICAL"
         self.confidence_score = confidence_score  # 0.0 to 1.0
@@ -36,6 +37,7 @@ class TaskPreAuditResult:
         self.draft_summary = draft_summary
         self.draft_email_html = draft_email_html
         self.draft_teams_text = draft_teams_text
+        self.proposed_ai_draft = proposed_ai_draft or draft_teams_text
         self.security_flags = security_flags
 
     def to_dict(self) -> Dict[str, Any]:
@@ -48,9 +50,11 @@ class TaskPreAuditResult:
             "draft_summary": self.draft_summary,
             "draft_email_html": self.draft_email_html,
             "draft_teams_text": self.draft_teams_text,
+            "proposed_ai_draft": self.proposed_ai_draft,
             "security_flags": self.security_flags,
             "audited_at": time.time(),
         }
+
 
 
 class AIAuditEngine:
@@ -169,4 +173,6 @@ class AIAuditEngine:
             draft_email_html=draft_email_html,
             draft_teams_text=draft_teams_text,
             security_flags=security_flags,
+            proposed_ai_draft=draft_teams_text,
         )
+

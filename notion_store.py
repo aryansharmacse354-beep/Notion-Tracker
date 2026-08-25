@@ -87,19 +87,43 @@ class NotionStore:
                     version INTEGER DEFAULT 1,
                     nonce TEXT,
                     budget TEXT DEFAULT '$0',
+                    proposed_ai_draft TEXT,
+                    edited_draft TEXT,
+                    ingestion_fingerprint TEXT,
+                    dlq_error_trace TEXT,
+                    dlq_reason TEXT,
                     created_at REAL,
                     updated_at REAL,
                     archived INTEGER DEFAULT 0
                 )
             """)
 
-            # Ensure budget column exists for existing tables
-            try:
-                cursor.execute("ALTER TABLE tasks ADD COLUMN budget TEXT DEFAULT '$0'")
-            except Exception:
-                pass
+            # Ensure newly added columns exist for existing tables
+            for col, col_type in [
+                ("budget", "TEXT DEFAULT '$0'"),
+                ("proposed_ai_draft", "TEXT"),
+                ("edited_draft", "TEXT"),
+                ("ingestion_fingerprint", "TEXT"),
+                ("dlq_error_trace", "TEXT"),
+                ("dlq_reason", "TEXT"),
+            ]:
+                try:
+                    cursor.execute(f"ALTER TABLE tasks ADD COLUMN {col} {col_type}")
+                except Exception:
+                    pass
+
+            # Ingestion Fingerprints Table (Deduplication Authority)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS ingestion_fingerprints (
+                    fingerprint TEXT PRIMARY KEY,
+                    task_id TEXT NOT NULL,
+                    created_at REAL NOT NULL,
+                    payload_summary TEXT
+                )
+            """)
 
             # 2. Run Log Table
+
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS audit_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -317,6 +341,11 @@ class NotionStore:
             "draft_summary": task_dict.get("draft_summary", ""),
             "draft_email_html": task_dict.get("draft_email_html", ""),
             "draft_teams_text": task_dict.get("draft_teams_text", ""),
+            "proposed_ai_draft": task_dict.get("proposed_ai_draft", task_dict.get("draft_teams_text", "")),
+            "edited_draft": task_dict.get("edited_draft", None),
+            "ingestion_fingerprint": task_dict.get("ingestion_fingerprint", None),
+            "dlq_error_trace": task_dict.get("dlq_error_trace", None),
+            "dlq_reason": task_dict.get("dlq_reason", None),
             "source": task_dict.get("source", "Webhook"),
             "version": task_dict.get("version", 1),
             "nonce": task_dict.get("nonce", nonce),
@@ -331,10 +360,14 @@ class NotionStore:
             cursor.execute("""
                 INSERT INTO tasks (id, title, details, priority, category, status, risk_level,
                                    confidence_score, reasoning_trace, draft_summary, draft_email_html,
-                                   draft_teams_text, source, version, nonce, budget, created_at, updated_at, archived)
+                                   draft_teams_text, proposed_ai_draft, edited_draft, ingestion_fingerprint,
+                                   dlq_error_trace, dlq_reason, source, version, nonce, budget,
+                                   created_at, updated_at, archived)
                 VALUES (:id, :title, :details, :priority, :category, :status, :risk_level,
                         :confidence_score, :reasoning_trace, :draft_summary, :draft_email_html,
-                        :draft_teams_text, :source, :version, :nonce, :budget, :created_at, :updated_at, :archived)
+                        :draft_teams_text, :proposed_ai_draft, :edited_draft, :ingestion_fingerprint,
+                        :dlq_error_trace, :dlq_reason, :source, :version, :nonce, :budget,
+                        :created_at, :updated_at, :archived)
             """, record)
             conn.commit()
 
@@ -350,6 +383,131 @@ class NotionStore:
         )
 
         return self.get_task(task_id)
+
+    def update_staged_draft(self, task_id: str, edited_draft: str, operator_name: str = "Operator") -> Optional[Dict[str, Any]]:
+        """Stage 3 HITL: Updates the human-edited draft wording before final dispatch.
+
+        Args:
+            task_id: Identifier of the task.
+            edited_draft: The modified wording created by the human operator.
+            operator_name: Name of the operator authoring the revision.
+
+        Returns:
+            The updated task dictionary.
+        """
+        default_rate_limiter.acquire(1.0)
+        now = time.time()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE tasks
+                SET edited_draft = ?, updated_at = ?, version = version + 1
+                WHERE id = ?
+            """, (edited_draft, now, task_id))
+            conn.commit()
+
+        self.append_audit_log(
+            record_id=task_id,
+            action="DRAFT_STAGED_BY_HUMAN",
+            operator_name=operator_name,
+            payload_data={"edited_length": len(edited_draft)},
+        )
+        return self.get_task(task_id)
+
+    def route_to_dlq(
+        self,
+        task_id: str,
+        error_trace: str,
+        reason: str = "Processing Exception",
+        operator_name: str = "System Guard",
+    ) -> Optional[Dict[str, Any]]:
+        """Stage 5 DLQ: Isolates a failed/corrupt task into DLQ: Needs Technical Review.
+
+        Args:
+            task_id: Identifier of the corrupt/failed task.
+            error_trace: Full formatted traceback or parser error text.
+            reason: Short human-readable summary of the root failure cause.
+            operator_name: Reporting entity.
+
+        Returns:
+            The quarantined task dictionary.
+        """
+        now = time.time()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE tasks
+                SET status = 'DLQ: Needs Technical Review',
+                    dlq_error_trace = ?,
+                    dlq_reason = ?,
+                    updated_at = ?,
+                    version = version + 1
+                WHERE id = ?
+            """, (error_trace, reason, now, task_id))
+            conn.commit()
+
+        self.append_audit_log(
+            record_id=task_id,
+            action="ROUTED_TO_DLQ",
+            operator_name=operator_name,
+            payload_data={"reason": reason, "status": "DLQ: Needs Technical Review"},
+        )
+        return self.get_task(task_id)
+
+    def get_dlq_tasks(self) -> List[Dict[str, Any]]:
+        """Retrieves all tasks quarantined in the Dead-Letter Queue."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM tasks
+                WHERE status = 'DLQ: Needs Technical Review'
+                ORDER BY updated_at DESC
+            """)
+            rows = cursor.fetchall()
+            tasks = []
+            for row in rows:
+                t = dict(row)
+                try:
+                    t["reasoning_trace"] = json.loads(t["reasoning_trace"]) if t.get("reasoning_trace") else []
+                except Exception:
+                    t["reasoning_trace"] = []
+                tasks.append(t)
+            return tasks
+
+    def check_and_record_fingerprint(
+        self,
+        fingerprint: str,
+        task_id: str,
+        payload_summary: str = "",
+        window_seconds: int = 600,
+    ) -> Tuple[bool, Optional[str], Optional[str]]:
+        """Stage 1 Ingestion: Validates and persists an ingestion fingerprint to block duplicates."""
+        now = time.time()
+        cutoff = now - window_seconds
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            # Check existing fingerprint in database
+            cursor.execute("""
+                SELECT task_id, created_at FROM ingestion_fingerprints
+                WHERE fingerprint = ?
+            """, (fingerprint,))
+            row = cursor.fetchone()
+            if row:
+                existing_task_id = row["task_id"]
+                created_at = row["created_at"]
+                if created_at >= cutoff:
+                    age = int(now - created_at)
+                    msg = f"Duplicate submission rejected. Fingerprint matched Task '{existing_task_id}' ({age}s ago)."
+                    return False, existing_task_id, msg
+
+            # Insert or replace fresh fingerprint
+            cursor.execute("""
+                INSERT OR REPLACE INTO ingestion_fingerprints (fingerprint, task_id, created_at, payload_summary)
+                VALUES (?, ?, ?, ?)
+            """, (fingerprint, task_id, now, payload_summary))
+            conn.commit()
+            return True, None, None
+
 
     def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
         """Retrieves a single task by ID."""

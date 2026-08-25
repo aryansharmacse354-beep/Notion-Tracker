@@ -129,27 +129,73 @@ class NotionTypesetter:
                 },
             })
 
-        # 7. Outbound Draft Preview Toggle
+        # 7. Outbound Draft Preview & Staging Toggle (Stage 3 HITL)
         draft_summary = audit_result.get("draft_summary", "")
-        teams_lbl = t("teams_message_label", lang=lang)
+        proposed_draft = task_data.get("proposed_ai_draft") or audit_result.get("proposed_ai_draft") or audit_result.get("draft_teams_text", draft_summary)
+        edited_draft = task_data.get("edited_draft")
+
+        draft_children = [
+            {
+                "object": "block",
+                "type": "callout",
+                "callout": {
+                    "rich_text": [{"type": "text", "text": {"content": "📝 Proposed AI Draft (Editable by Human Operator):\nHumans can tweak the exact wording directly inside Notion before approving. Outbound dispatches will send the edited version."}}],
+                    "icon": {"emoji": "✏️"},
+                    "color": "blue_background",
+                }
+            },
+            {
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [{"type": "text", "text": {"content": f"Proposed Outbound Text:\n{proposed_draft}"}}]
+                }
+            }
+        ]
+
+        if edited_draft:
+            draft_children.append({
+                "object": "block",
+                "type": "callout",
+                "callout": {
+                    "rich_text": [{"type": "text", "text": {"content": f"⚡ Staged Human Edit (Overrides AI Draft):\n{edited_draft}"}}],
+                    "icon": {"emoji": "👤"},
+                    "color": "green_background",
+                }
+            })
+
         blocks.append({
             "object": "block",
             "type": "toggle",
             "toggle": {
                 "rich_text": [{"type": "text", "text": {"content": t("outbound_draft_toggle", lang=lang)}}],
-                "children": [
-                    {
-                        "object": "block",
-                        "type": "paragraph",
-                        "paragraph": {
-                            "rich_text": [{"type": "text", "text": {"content": f"{teams_lbl}:\n{audit_result.get('draft_teams_text', draft_summary)}"}}]
-                        }
-                    }
-                ],
+                "children": draft_children,
             },
         })
 
-        # 8. Turn-Off Test Footer Callout
+        # 8. Dead-Letter Queue (DLQ) Diagnostic Block (If in DLQ status)
+        if task_data.get("status") == "DLQ: Needs Technical Review" or task_data.get("dlq_error_trace"):
+            reason_str = task_data.get("dlq_reason", "Unhandled processing exception")
+            trace_str = task_data.get("dlq_error_trace", "No traceback provided.")
+            blocks.append({
+                "object": "block",
+                "type": "callout",
+                "callout": {
+                    "rich_text": [{"type": "text", "text": {"content": f"🚨 DEAD-LETTER QUEUE (DLQ) — TECHNICAL REVIEW REQUIRED\nReason: {reason_str}\nThis task was quarantined to prevent data loss or silent failure."}}],
+                    "icon": {"emoji": "🛠️"},
+                    "color": "red_background",
+                }
+            })
+            blocks.append({
+                "object": "block",
+                "type": "code",
+                "code": {
+                    "rich_text": [{"type": "text", "text": {"content": trace_str}}],
+                    "language": "plain text",
+                }
+            })
+
+        # 9. Turn-Off Test Footer Callout
         blocks.append({
             "object": "block",
             "type": "callout",
@@ -161,6 +207,7 @@ class NotionTypesetter:
         })
 
         return blocks
+
 
     @staticmethod
     def build_run_log_page_blocks(

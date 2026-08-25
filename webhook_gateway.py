@@ -119,6 +119,52 @@ def verify_ledger():
     return AuditLedger.verify_ledger_chain(logs)
 
 
+from deduplication_engine import default_deduplicator
+import traceback
+
+
+class StageDraftRequest(BaseModel):
+    edited_draft: str
+    operator_name: Optional[str] = "Operator"
+
+
+@app.get("/api/v1/dlq")
+def get_dead_letter_queue():
+    """Stage 5 DLQ: Returns all tasks currently isolated in the Dead-Letter Queue."""
+    return default_store.get_dlq_tasks()
+
+
+@app.post("/api/v1/dlq/{task_id}/resolve")
+def resolve_dlq_task(task_id: str, operator_name: str = "Technical Auditor"):
+    """Stage 5 DLQ: Re-triages a quarantined DLQ task back to Ready for Review."""
+    task = default_store.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found in DLQ.")
+    
+    updated, _, _ = default_store.update_task_with_occ(
+        task_id=task_id,
+        base_record=task,
+        local_updates={"status": "Ready for Review", "dlq_reason": "Resolved by Technical Auditor"},
+        operator_name=operator_name,
+    )
+    return {"status": "RESOLVED", "task": updated}
+
+
+@app.post("/api/v1/tasks/{task_id}/stage-draft")
+def stage_human_draft(task_id: str, req: StageDraftRequest):
+    """Stage 3 HITL: Stages a human operator edit for the AI draft before final approval."""
+    task = default_store.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    
+    updated = default_store.update_staged_draft(
+        task_id=task_id,
+        edited_draft=req.edited_draft,
+        operator_name=req.operator_name or "Operator",
+    )
+    return {"status": "DRAFT_STAGED", "task": updated}
+
+
 @app.post("/v1/webhook/ingest", status_code=status.HTTP_202_ACCEPTED)
 async def ingest_webhook(
     request: Request,
@@ -129,7 +175,8 @@ async def ingest_webhook(
     """Secure webhook ingestion endpoint.
 
     Validates HMAC signature, checks nonce uniqueness & timestamp drift,
-    runs cognitive AI pre-audit, and persists task into the Notion store.
+    applies Deduplication Fingerprinting, runs cognitive AI pre-audit,
+    and isolates unprocessable items into the Dead-Letter Queue (DLQ).
     """
     body_bytes = await request.body()
 
@@ -179,55 +226,127 @@ async def ingest_webhook(
         req_obj = WebhookIngestRequest(**data_json)
     except Exception as e:
         logger.warning(f"Ingest Bad Request: Malformed JSON or invalid schema: {e}")
+        # Stage 5 DLQ: Quarantine malformed payload rather than crashing silently
+        err_id = f"dlq_malformed_{int(time.time())}"
+        default_store.route_to_dlq(
+            task_id=err_id,
+            error_trace=f"Schema parsing error:\n{str(e)}\nRaw Body: {body_bytes.decode('utf-8', errors='ignore')[:300]}",
+            reason="Malformed JSON or Schema Error",
+            operator_name="DLQ Schema Guard",
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Malformed JSON payload or invalid schema: {str(e)}",
+            detail=f"Malformed JSON payload or invalid schema: {str(e)}. Quarantined to DLQ.",
         )
 
-    # 5. Stage 2: AI Pre-Audit Engine Evaluation
-    audit_res = AIAuditEngine.analyze_task(
+    # 5. Stage 1: Deduplication Fingerprinting Check
+    fingerprint = default_deduplicator.compute_fingerprint(
         title=req_obj.payload.task_title,
         details=req_obj.payload.details,
-        requested_priority=req_obj.payload.priority,
+        source=req_obj.source,
+        timestamp=float(ts_int),
     )
-
-    # 6. Stage 3: Dynamic Store Insertion
-    task_dict = {
-        "id": req_obj.event_id,
-        "title": req_obj.payload.task_title,
-        "details": req_obj.payload.details,
-        "priority": audit_res.suggested_priority,
-        "category": audit_res.category,
-        "status": "Ready for Review",
-        "risk_level": audit_res.risk_level,
-        "confidence_score": audit_res.confidence_score,
-        "reasoning_trace": audit_res.reasoning_trace,
-        "draft_summary": audit_res.draft_summary,
-        "draft_email_html": audit_res.draft_email_html,
-        "draft_teams_text": audit_res.draft_teams_text,
-        "source": req_obj.source,
-    }
-
-    created_record = default_store.create_task(task_dict, operator_name=f"{req_obj.source} [Gateway]")
-
-    logger.info(f"Task Ingested Successfully: {req_obj.event_id} - '{req_obj.payload.task_title}' (Risk: {audit_res.risk_level})")
-
-    return JSONResponse(
-        status_code=status.HTTP_202_ACCEPTED,
-        content={
-            "status": "ACCEPTED",
-            "message": "Signature verified, payload pre-audited and queued for human review.",
-            "event_id": req_obj.event_id,
-            "risk_evaluation": {
-                "risk_level": audit_res.risk_level,
-                "confidence_score": audit_res.confidence_score,
-                "category": audit_res.category,
+    is_unique, dup_task_id, rej_msg = default_deduplicator.check_and_record(
+        fingerprint=fingerprint,
+        task_id=req_obj.event_id,
+        timestamp=float(ts_int),
+    )
+    if not is_unique:
+        logger.warning(f"[DEDUPLICATION] Blocked duplicate submission for '{req_obj.payload.task_title}'")
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "status": "DUPLICATE_IGNORED",
+                "message": rej_msg,
+                "fingerprint": fingerprint,
+                "original_task_id": dup_task_id,
             },
-        },
-    )
+        )
+    default_store.check_and_record_fingerprint(fingerprint, req_obj.event_id, req_obj.payload.task_title)
+
+    # 6. Stage 2: AI Pre-Audit & DLQ Resilient Execution
+    try:
+        audit_res = AIAuditEngine.analyze_task(
+            title=req_obj.payload.task_title,
+            details=req_obj.payload.details,
+            requested_priority=req_obj.payload.priority,
+        )
+
+        task_dict = {
+            "id": req_obj.event_id,
+            "title": req_obj.payload.task_title,
+            "details": req_obj.payload.details,
+            "priority": audit_res.suggested_priority,
+            "category": audit_res.category,
+            "status": "Ready for Review",
+            "risk_level": audit_res.risk_level,
+            "confidence_score": audit_res.confidence_score,
+            "reasoning_trace": audit_res.reasoning_trace,
+            "draft_summary": audit_res.draft_summary,
+            "draft_email_html": audit_res.draft_email_html,
+            "draft_teams_text": audit_res.draft_teams_text,
+            "proposed_ai_draft": audit_res.proposed_ai_draft,
+            "ingestion_fingerprint": fingerprint,
+            "source": req_obj.source,
+        }
+
+        created_record = default_store.create_task(task_dict, operator_name=f"{req_obj.source} [Gateway]")
+        logger.info(f"Task Ingested Successfully: {req_obj.event_id} - '{req_obj.payload.task_title}' (Risk: {audit_res.risk_level})")
+
+        return JSONResponse(
+            status_code=status.HTTP_202_ACCEPTED,
+            content={
+                "status": "ACCEPTED",
+                "message": "Signature verified, deduplicated, pre-audited and staged for human review.",
+                "event_id": req_obj.event_id,
+                "fingerprint": fingerprint,
+                "risk_evaluation": {
+                    "risk_level": audit_res.risk_level,
+                    "confidence_score": audit_res.confidence_score,
+                    "category": audit_res.category,
+                },
+                "proposed_ai_draft": audit_res.proposed_ai_draft,
+            },
+        )
+    except Exception as exc:
+        err_trace = traceback.format_exc()
+        logger.error(f"[DLQ] Unhandled processing error during ingestion of {req_obj.event_id}: {exc}")
+        
+        # Route to DLQ rather than crashing or losing data
+        dlq_task_dict = {
+            "id": req_obj.event_id,
+            "title": f"FAILED_INGEST: {req_obj.payload.task_title}",
+            "details": req_obj.payload.details,
+            "priority": req_obj.payload.priority or "normal",
+            "category": "DLQ Exception",
+            "status": "DLQ: Needs Technical Review",
+            "risk_level": "CRITICAL",
+            "confidence_score": 0.0,
+            "reasoning_trace": [f"[DLQ Error] {str(exc)}"],
+            "draft_summary": "Task processing failed. Quarantined in Dead-Letter Queue.",
+            "draft_email_html": "",
+            "draft_teams_text": "",
+            "proposed_ai_draft": "",
+            "ingestion_fingerprint": fingerprint,
+            "dlq_error_trace": err_trace,
+            "dlq_reason": str(exc),
+            "source": req_obj.source,
+        }
+        default_store.create_task(dlq_task_dict, operator_name="DLQ Exception Quarantine")
+        
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "status": "ROUTED_TO_DLQ",
+                "message": "Processing exception occurred. Task quarantined in 'DLQ: Needs Technical Review'.",
+                "event_id": req_obj.event_id,
+                "error": str(exc),
+            },
+        )
 
 
 if __name__ == "__main__":
     import uvicorn
     from config import GATEWAY_HOST, GATEWAY_PORT
     uvicorn.run(app, host=GATEWAY_HOST, port=GATEWAY_PORT)
+

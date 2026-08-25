@@ -144,7 +144,18 @@ def _dispatch_single_task_worker(task: Dict[str, Any]) -> Tuple[str, bool, str]:
         )
         return task_id, True, f"Successfully executed template '{matching_tmpl.get('name', 'Standard')}' (v{updated_task.get('version')})"
     except Exception as e:
-        return task_id, False, str(e)
+        import traceback
+        err_tb = traceback.format_exc()
+        logger.error(f"[DLQ] Dispatch execution failed for task {task_id}: {e}")
+        # Stage 5 DLQ: Safely isolate failing task to DLQ
+        default_store.route_to_dlq(
+            task_id=task_id,
+            error_trace=err_tb,
+            reason=f"Worker Dispatch Failure: {str(e)}",
+            operator_name="Worker Daemon DLQ Guard",
+        )
+        return task_id, False, f"Quarantined to DLQ: {str(e)}"
+
 
 
 

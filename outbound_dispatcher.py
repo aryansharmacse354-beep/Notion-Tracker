@@ -49,7 +49,14 @@ class TeamsAdaptiveCardBuilder:
         risk_level = task_data.get("risk_level", "LOW")
         task_id = task_data.get("id", "N/A")
 
-        risk_color = "Attention" if risk_level in ("CRITICAL", "HIGH") else ("Warning" if risk_level == "MEDIUM" else "Good")
+        # Stage 3 HITL: Prioritize human-edited wording over raw AI draft
+        outbound_content = (
+            task_data.get("edited_draft")
+            or task_data.get("proposed_ai_draft")
+            or task_data.get("draft_teams_text")
+            or task_data.get("details", "No details provided.")
+        )
+        is_human_edited = bool(task_data.get("edited_draft"))
 
         card = {
             "type": "message",
@@ -77,18 +84,19 @@ class TeamsAdaptiveCardBuilder:
                                     {"title": "Priority:", "value": priority},
                                     {"title": "Pre-Audit Risk:", "value": f"{risk_level}"},
                                     {"title": "Approved By:", "value": str(operator_name)},
+                                    {"title": "Draft Version:", "value": "Human-Edited ✍️" if is_human_edited else "AI Proposed 🤖"},
                                     {"title": "Status:", "value": "APPROVED & DISPATCHED"},
                                 ],
                             },
                             {
                                 "type": "TextBlock",
-                                "text": "Task Scope & Instructions:",
+                                "text": "Outbound Content (Authorized by Operator):",
                                 "weight": "Bolder",
                                 "spacing": "Medium",
                             },
                             {
                                 "type": "TextBlock",
-                                "text": str(details),
+                                "text": str(outbound_content),
                                 "wrap": True,
                             },
                         ],
@@ -97,6 +105,7 @@ class TeamsAdaptiveCardBuilder:
             ],
         }
         return card
+
 
 
 class OutboundDispatcher:

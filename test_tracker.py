@@ -605,8 +605,102 @@ class TestAIAuditAndTypesetting(unittest.TestCase):
         self.assertIsNotNone(res_approved["security_seal"])
 
 
+class TestEnterpriseBlueprintGaps(unittest.TestCase):
+    """Test Suite 5: 3 Blueprint Enterprise Gaps (Draft Staging, DLQ, Deduplication)."""
+
+    def setUp(self):
+        from notion_store import default_store
+        from deduplication_engine import DeduplicationFingerprinter
+        self.store = default_store
+        self.dedup = DeduplicationFingerprinter(default_window_seconds=600)
+
+    def test_deduplication_fingerprinting(self):
+        """Gap 3: Deduplication Fingerprinting blocks redundant double-clicks."""
+        title = "Provision Lab B Devices"
+        details = "15 student workstations"
+        source = "Academic Portal"
+        now = time.time()
+
+        fp1 = self.dedup.compute_fingerprint(title, details, source, timestamp=now)
+        fp2 = self.dedup.compute_fingerprint("  provision lab b devices  ", "15 student workstations", source, timestamp=now)
+
+        # Normalized inputs must produce identical SHA-256 fingerprints
+        self.assertEqual(fp1, fp2)
+
+        # First ingestion must pass
+        is_uniq1, dup_id1, _ = self.dedup.check_and_record(fp1, "task_orig_001", timestamp=now)
+        self.assertTrue(is_uniq1)
+        self.assertIsNone(dup_id1)
+
+        # Rapid double-click must be rejected
+        is_uniq2, dup_id2, reason = self.dedup.check_and_record(fp1, "task_duplicate_002", timestamp=now + 5)
+        self.assertFalse(is_uniq2)
+        self.assertEqual(dup_id2, "task_orig_001")
+        self.assertIn("Duplicate submission blocked", reason)
+
+    def test_draft_and_diff_staging(self):
+        """Gap 1: Human operator staged revisions override AI proposed draft."""
+        from outbound_dispatcher import TeamsAdaptiveCardBuilder
+        task_id = f"test_stage_{int(time.time())}"
+        task_dict = {
+            "id": task_id,
+            "title": "Database Schema Migration",
+            "details": "Run 042_schema.sql on replica cluster",
+            "priority": "high",
+            "category": "Infrastructure",
+            "status": "Ready for Review",
+            "risk_level": "HIGH",
+            "confidence_score": 0.92,
+            "draft_teams_text": "AI Proposed: Migrate schema on cluster.",
+            "proposed_ai_draft": "AI Proposed: Migrate schema on cluster.",
+        }
+        created = self.store.create_task(task_dict, operator_name="Test Ingest")
+        self.assertIsNotNone(created)
+        self.assertEqual(created["proposed_ai_draft"], "AI Proposed: Migrate schema on cluster.")
+
+        # Human operator stages custom refined draft
+        human_text = "Human Operator Revised: Certified and approved migration for Cluster A with zero downtime."
+        updated = self.store.update_staged_draft(task_id, human_text, operator_name="Aryan Sharma")
+        self.assertEqual(updated["edited_draft"], human_text)
+
+        # Outbound Teams card must prioritize human-edited draft
+        card = TeamsAdaptiveCardBuilder.build_card_payload(updated, "Aryan Sharma")
+        card_body = card["attachments"][0]["content"]["body"]
+        text_blocks = [b["text"] for b in card_body if b.get("type") == "TextBlock"]
+        self.assertIn(human_text, text_blocks)
+
+    def test_dead_letter_queue_quarantine(self):
+        """Gap 2: Unprocessable or corrupt payloads are quarantined in DLQ."""
+        corrupt_id = f"test_dlq_{int(time.time())}"
+        corrupt_task = {
+            "id": corrupt_id,
+            "title": "Corrupt Payload Ingestion",
+            "details": "Malformed payload with schema error",
+            "status": "Ready for Review",
+        }
+        self.store.create_task(corrupt_task, operator_name="Test Ingest")
+
+        # Simulate unexpected processing failure
+        mock_traceback = "Traceback (most recent call last):\n  File 'agent.py', line 42, in process\nValueError: Corrupt input"
+        dlq_task = self.store.route_to_dlq(
+            task_id=corrupt_id,
+            error_trace=mock_traceback,
+            reason="ValueError: Corrupt input schema",
+            operator_name="DLQ Guard",
+        )
+        self.assertEqual(dlq_task["status"], "DLQ: Needs Technical Review")
+        self.assertEqual(dlq_task["dlq_reason"], "ValueError: Corrupt input schema")
+        self.assertIn("ValueError: Corrupt input", dlq_task["dlq_error_trace"])
+
+        # DLQ query must list the quarantined task
+        dlq_items = self.store.get_dlq_tasks()
+        dlq_ids = [t["id"] for t in dlq_items]
+        self.assertIn(corrupt_id, dlq_ids)
+
+
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

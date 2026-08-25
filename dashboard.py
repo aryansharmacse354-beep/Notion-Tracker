@@ -74,8 +74,10 @@ from audit_ledger import AuditLedger
 from report_builder import PDFReportBuilder
 from system_health_monitor import SystemHealthMonitor
 from voice_memo_agent import VoiceMemoAgent
+from deduplication_engine import default_deduplicator
 from i18n import t, get_current_language, set_current_language, TRANSLATIONS
 from workflow_engine import WorkflowEngine, AVAILABLE_PIPELINE_STEPS
+
 
 
 
@@ -462,6 +464,7 @@ with st.sidebar:
     nav_keys = [
         "nav_command_center",
         "nav_hitl",
+        "nav_dlq",
         "nav_multiselect",
         "nav_biometrics",
         "nav_webhook",
@@ -470,6 +473,7 @@ with st.sidebar:
     ]
     raw_nav_labels = [t(k, lang=cur_lang) for k in nav_keys]
     chosen_label = st.radio("Platform Modules:", raw_nav_labels, index=0)
+
     nav_index = raw_nav_labels.index(chosen_label) if chosen_label in raw_nav_labels else 0
     active_module_key = nav_keys[nav_index]
 
@@ -823,8 +827,51 @@ elif active_module_key == "nav_hitl":
                     is_authed = st.session_state.biometric_authenticated or st.session_state.otp_verified
                     st.checkbox("Biometric / OTP operator gate unlocked", value=is_authed, key=f"chk_gate_{selected_task['id']}")
 
-                with st.expander("📤 Pre-Compiled Outbound Dispatch Draft", expanded=False):
-                    edited_draft_text = st.text_area("Teams Adaptive Card Message Prose:", value=selected_task.get("draft_teams_text", ""), height=90)
+                # Stage 3 HITL: Draft & Diff Staging Console
+                st.markdown("#### 📝 Stage 3 HITL: Draft & Diff Staging Console")
+                st.caption("The AI pre-audits the request and drafts the outbound notification. Human operators can tweak or rewrite the wording directly here before authorizing.")
+
+                default_draft = selected_task.get("edited_draft") or selected_task.get("proposed_ai_draft") or selected_task.get("draft_teams_text", "")
+                
+                draft_c1, draft_c2 = st.columns([1, 1])
+                with draft_c1:
+                    st.markdown("**🤖 Original AI Proposed Draft:**")
+                    st.info(selected_task.get("proposed_ai_draft") or selected_task.get("draft_teams_text", "No draft generated."))
+                with draft_c2:
+                    st.markdown("**✍️ Human Operator Staged Revision:**")
+                    edited_draft_text = st.text_area(
+                        "Operator Revised Wording:",
+                        value=default_draft,
+                        height=130,
+                        key=f"stage_draft_{selected_task['id']}",
+                        help="Edit the message text here. Your revisions will override the AI draft during outbound dispatch.",
+                    )
+                    if st.button("💾 Stage Draft Revision", key=f"btn_stage_{selected_task['id']}"):
+                        default_store.update_staged_draft(
+                            task_id=selected_task["id"],
+                            edited_draft=edited_draft_text,
+                            operator_name=st.session_state.active_user,
+                        )
+                        st.success("✅ Staged draft revision saved! Ready for final human authorization.")
+                        time.sleep(1)
+                        st.rerun()
+
+                # Dead-Letter Queue (DLQ) Diagnostic if quarantined
+                if selected_task.get("status") == "DLQ: Needs Technical Review" or selected_task.get("dlq_error_trace"):
+                    st.markdown("---")
+                    st.error(f"🚨 **DEAD-LETTER QUEUE (DLQ) QUARANTINE ACTIVE**\n\n**Reason:** `{selected_task.get('dlq_reason', 'Processing Exception')}`")
+                    with st.expander("🔍 Inspect Full Technical Traceback", expanded=True):
+                        st.code(selected_task.get("dlq_error_trace", "No traceback logged."), language="text")
+                    if st.button("🔄 Re-Triage Task to 'Ready for Review'", key=f"retriage_{selected_task['id']}"):
+                        default_store.update_task_with_occ(
+                            task_id=selected_task["id"],
+                            base_record=selected_task,
+                            local_updates={"status": "Ready for Review", "dlq_reason": "Re-triaged by Operator"},
+                            operator_name=st.session_state.active_user,
+                        )
+                        st.success("Task returned to active HITL Review pipeline!")
+                        time.sleep(1)
+                        st.rerun()
 
                 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
@@ -838,13 +885,18 @@ elif active_module_key == "nav_hitl":
                         updated, conflict, details = default_store.update_task_with_occ(
                             task_id=selected_task["id"],
                             base_record=selected_task,
-                            local_updates={"status": "Approved", "draft_teams_text": edited_draft_text},
+                            local_updates={
+                                "status": "Approved",
+                                "edited_draft": edited_draft_text,
+                                "draft_teams_text": edited_draft_text,
+                            },
                             operator_name=st.session_state.active_user,
                         )
                         default_store.record_operator_approval(st.session_state.active_user)
                         st.success(f"✅ Task approved by **{st.session_state.active_user}**! Streak & Gamification points updated.")
                         time.sleep(1)
                         st.rerun()
+
 
 
                 # REJECT BUTTON
@@ -1044,11 +1096,61 @@ elif active_module_key == "nav_biometrics":
 
 
 # ==============================================================================
+# VIEW: DEAD-LETTER QUEUE (DLQ) & TECHNICAL TRIAGE
+# ==============================================================================
+elif active_module_key == "nav_dlq":
+    st.markdown("### 🚨 Dead-Letter Queue (DLQ) & Technical Triage Hub")
+    st.info("💡 **Zero Data Loss Guarantee**: Unprocessable payloads, schema parsing exceptions, or downstream API failures are quarantined here rather than crashing the engine or silently disappearing.")
+
+    dlq_items = default_store.get_dlq_tasks()
+
+    if not dlq_items:
+        st.success("🟢 **Dead-Letter Queue is Clean!** Zero quarantined payloads or runtime exceptions.")
+    else:
+        st.warning(f"⚠️ **{len(dlq_items)} Task(s) Quarantined in Dead-Letter Queue** requiring technical operator review.")
+
+        for item in dlq_items:
+            st.markdown(f"""
+            <div style="background: #1e1b2e; border: 1px solid #ef4444; border-radius: 10px; padding: 16px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 800; color: #f87171; font-size: 1.05rem;">🚨 {item.get('title')}</span>
+                    <span style="font-size: 0.75rem; background: rgba(239,68,68,0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 2px 8px; border-radius: 6px;">OCC v{item.get('version', 1)}</span>
+                </div>
+                <div style="font-size: 0.8rem; color: #cbd5e1; margin: 6px 0 10px 0;"><b>Source:</b> {item.get('source')} | <b>Quarantined Reason:</b> <code>{item.get('dlq_reason', 'Processing Exception')}</code></div>
+                <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 8px;"><b>Scope:</b> {item.get('details')}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            with st.expander(f"🔍 View Full Traceback for {item['id']}", expanded=False):
+                st.code(item.get("dlq_error_trace", "No traceback recorded."), language="text")
+
+            col_d1, col_d2 = st.columns([1, 4])
+            with col_d1:
+                if st.button("🔄 Re-Triage to Review", key=f"dlq_re_{item['id']}", type="primary"):
+                    default_store.update_task_with_occ(
+                        task_id=item["id"],
+                        base_record=item,
+                        local_updates={"status": "Ready for Review", "dlq_reason": f"Re-triaged by {st.session_state.active_user}"},
+                        operator_name=st.session_state.active_user,
+                    )
+                    st.success(f"Task '{item['id']}' returned to active review queue!")
+                    time.sleep(1)
+                    st.rerun()
+            with col_d2:
+                if st.button("🗑️ Discard Corrupt Payload", key=f"dlq_del_{item['id']}"):
+                    default_store.archive_task(item["id"])
+                    st.info("Corrupt payload archived.")
+                    time.sleep(1)
+                    st.rerun()
+            st.markdown("---")
+
+
+# ==============================================================================
 # VIEW 3: WEBHOOK INGESTION HUB
 # ==============================================================================
 elif active_module_key == "nav_webhook":
-    st.markdown("### 🧪 Webhook Ingestion & Payload Simulation Hub")
-    st.write("Simulates authenticated external webhooks with HMAC-SHA256 signatures, nonce tracking, and AI Pre-Auditing.")
+    st.markdown("### 🧪 Webhook Ingestion & Deduplication Hub")
+    st.write("Simulates authenticated external webhooks with HMAC-SHA256 signatures, Deduplication Fingerprinting, nonce tracking, and AI Pre-Auditing.")
 
     presets = {
         "Academic Registration (Normal Risk)": {
@@ -1104,34 +1206,49 @@ elif active_module_key == "nav_webhook":
     }
     raw_json_bytes = json.dumps(req_dict, indent=2).encode("utf-8")
     generated_sig = generate_hmac_signature(raw_json_bytes, WEBHOOK_SECRET)
+    calculated_fingerprint = default_deduplicator.compute_fingerprint(title=p_title, details=p_details, source=src, timestamp=float(ts_val))
 
     st.markdown(f"**Calculated `X-Signature-HMAC`:** `<code>{generated_sig}</code>`", unsafe_allow_html=True)
+    st.markdown(f"**Calculated Ingestion Fingerprint (SHA-256):** `<code>{calculated_fingerprint}</code>`", unsafe_allow_html=True)
 
     if st.button("🚀 Ingest Webhook Payload (Run AI Pre-Audit)", type="primary"):
-        n_ok, n_msg = default_nonce_guard.validate_and_record(nonce_val, int(ts_val))
-        if not n_ok:
-            st.error(f"❌ Ingestion Blocked: {n_msg}")
+        # Deduplication check
+        is_unique, dup_id, rej_msg = default_deduplicator.check_and_record(
+            fingerprint=calculated_fingerprint,
+            task_id=evt_id,
+            timestamp=float(ts_val),
+        )
+        if not is_unique:
+            st.error(f"🛑 **DEDUPLICATION FINGERPRINT REJECTION:**\n\n{rej_msg}\n\nFingerprint: `{calculated_fingerprint[:32]}...` (Prevented duplicate row creation in Notion).")
         else:
-            audit_res = AIAuditEngine.analyze_task(title=p_title, details=p_details, requested_priority=p_priority)
+            default_store.check_and_record_fingerprint(calculated_fingerprint, evt_id, p_title)
+            n_ok, n_msg = default_nonce_guard.validate_and_record(nonce_val, int(ts_val))
+            if not n_ok:
+                st.error(f"❌ Ingestion Blocked: {n_msg}")
+            else:
+                audit_res = AIAuditEngine.analyze_task(title=p_title, details=p_details, requested_priority=p_priority)
 
-            task_dict = {
-                "id": evt_id,
-                "title": p_title,
-                "details": p_details,
-                "priority": audit_res.suggested_priority,
-                "category": audit_res.category,
-                "status": "Ready for Review",
-                "risk_level": audit_res.risk_level,
-                "confidence_score": audit_res.confidence_score,
-                "reasoning_trace": audit_res.reasoning_trace,
-                "draft_summary": audit_res.draft_summary,
-                "draft_email_html": audit_res.draft_email_html,
-                "draft_teams_text": audit_res.draft_teams_text,
-                "source": src,
-            }
-            created = default_store.create_task(task_dict, operator_name=f"{src} [Ingest Console]")
+                task_dict = {
+                    "id": evt_id,
+                    "title": p_title,
+                    "details": p_details,
+                    "priority": audit_res.suggested_priority,
+                    "category": audit_res.category,
+                    "status": "Ready for Review",
+                    "risk_level": audit_res.risk_level,
+                    "confidence_score": audit_res.confidence_score,
+                    "reasoning_trace": audit_res.reasoning_trace,
+                    "draft_summary": audit_res.draft_summary,
+                    "draft_email_html": audit_res.draft_email_html,
+                    "draft_teams_text": audit_res.draft_teams_text,
+                    "proposed_ai_draft": audit_res.proposed_ai_draft,
+                    "ingestion_fingerprint": calculated_fingerprint,
+                    "source": src,
+                }
+                created = default_store.create_task(task_dict, operator_name=f"{src} [Ingest Console]")
 
-            st.success(f"🎉 **Webhook Ingestion Succeeded!** (Event ID: `{evt_id}`)\n\n• AI Evaluated Risk: **{audit_res.risk_level}** (Confidence: {int(audit_res.confidence_score*100)}%)\n• Category: {audit_res.category}\n• Persisted in Notion Database under status `Ready for Review`.")
+                st.success(f"🎉 **Webhook Ingestion Succeeded!** (Event ID: `{evt_id}`)\n\n• Ingestion Fingerprint: `{calculated_fingerprint[:24]}...`\n• AI Evaluated Risk: **{audit_res.risk_level}** (Confidence: {int(audit_res.confidence_score*100)}%)\n• Category: {audit_res.category}\n• Persisted in Notion Database under status `Ready for Review`.")
+
 
 
 # ==============================================================================
