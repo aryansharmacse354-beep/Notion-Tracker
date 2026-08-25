@@ -51,6 +51,18 @@
 
 
           <li class="nav-item">
+            <a class="nav-link" data-view="view-dlq" onclick="switchView('view-dlq', this)">
+              <span class="nav-icon">🚨</span>
+              <span>Dead-Letter Queue (DLQ)</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-view="view-agents" onclick="switchView('view-agents', this)">
+              <span class="nav-icon">🎙️</span>
+              <span>Voice & @AI Agents</span>
+            </a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link" data-view="view-webhook" onclick="switchView('view-webhook', this)">
               <span class="nav-icon">🧪</span>
               <span>Webhook Simulator</span>
@@ -103,6 +115,9 @@
           <span class="badge-tag indigo">Zero-Trust Pipeline Active</span>
         </div>
         <div class="top-nav-right">
+          <a href="http://localhost:8501" target="_blank" class="btn btn-secondary" style="text-decoration: none; font-size: 0.75rem; padding: 5px 12px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #475569; color: #f8fafc;">
+            🎛️ Streamlit Portal (8501) ↗
+          </a>
           <div class="operator-chip">
             <span class="status-dot"></span>
             <span id="operatorDisplay">Aryan Sharma (Lead Developer)</span>
@@ -468,6 +483,102 @@
         </div>
       </section>
 
+      <!-- =========================================================================
+           VIEW 7: DEAD-LETTER QUEUE (DLQ) GALLERY VIEW
+           ========================================================================= -->
+      <section class="view-viewport" id="view-dlq">
+        <div class="scroll-panel" style="height: 100%;">
+          <div class="panel-header">
+            <h3><span>🚨</span> Dead-Letter Queue (DLQ) — Industrial Fault Isolation</h3>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn btn-danger" onclick="seedSampleDlqTask()">⚠️ Simulate Malformed Crash Ingest</button>
+              <button class="btn btn-secondary" onclick="loadDlqTasks()">🔄 Refresh DLQ Store</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="risk-alert-box critical" style="margin-bottom: 16px;">
+              <span>🛡️ <b>Stage 5 Enterprise Observability:</b> If payloads throw unhandled schema or execution errors, the backend isolates them into this dedicated 'Needs Technical Review' quarantine gallery with full tracebacks rather than crashing silently.</span>
+            </div>
+            
+            <div id="dlqGalleryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px;">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================================
+           VIEW 8: VOICE MEMO & NATURAL LANGUAGE @AI COMMENT AGENTS
+           ========================================================================= -->
+      <section class="view-viewport" id="view-agents">
+        <div class="grid-2col" style="height: 100%;">
+          <!-- Left: @AI Comment Command Agent -->
+          <div class="scroll-panel">
+            <div class="panel-header">
+              <h3><span>💬</span> Notion Natural Language @AI Comment Agent</h3>
+              <span class="badge-tag indigo">Regex + NLP Intent</span>
+            </div>
+            <div class="panel-body">
+              <div class="risk-alert-box low">
+                <span>In Notion, operators write inline comments like <code>@AI update budget to $4,500</code> or <code>@AI re-assess risk</code>. The daemon polls and dispatches them via OCC.</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Target Task for Comment</label>
+                <select id="agentCommentTaskSelect" class="form-control">
+                  <!-- Rendered via JS -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Comment Command Text</label>
+                <input type="text" id="agentCommentInput" class="form-control" value="@AI update budget to $4,500 and escalate priority to critical for Lab Group B">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Quick Preset Commands</label>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  <button class="btn btn-secondary" style="font-size: 0.70rem; padding: 4px 8px;" onclick="setCommentPreset('@AI update budget to $8,500 for secondary lab cluster')">💰 Budget $8,500</button>
+                  <button class="btn btn-secondary" style="font-size: 0.70rem; padding: 4px 8px;" onclick="setCommentPreset('@AI re-assess risk and generate executive summary')">🧠 Re-Assess Risk</button>
+                  <button class="btn btn-secondary" style="font-size: 0.70rem; padding: 4px 8px;" onclick="setCommentPreset('@AI request security MFA biometric clearance')">🔐 Request MFA</button>
+                </div>
+              </div>
+              <button class="btn btn-primary" onclick="dispatchCommentCommand()" style="width: 100%;">⚡ Execute @AI Comment Agent</button>
+              
+              <div id="commentResultBox" style="margin-top: 14px; display: none; background: var(--bg-card-sub); padding: 10px; border-radius: 6px; border: 1px solid var(--card-border); font-size: 0.8rem;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Gemini 1.5 Flash Voice Memo Agent -->
+          <div class="scroll-panel">
+            <div class="panel-header">
+              <h3><span>🎙️</span> Gemini 1.5 Flash Audio-Modal Voice Agent</h3>
+              <span class="badge-tag green">Audio-Modal AI</span>
+            </div>
+            <div class="panel-body">
+              <div class="risk-alert-box low">
+                <span>Transcribes and extracts structured state transitions from attached voice memos (e.g. <code>.wav</code>, <code>.mp3</code>, <code>.m4a</code>) with optimistic concurrency.</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Target Task for Voice Memo</label>
+                <select id="agentVoiceTaskSelect" class="form-control">
+                  <!-- Rendered via JS -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Simulated Audio File Attachment</label>
+                <select id="agentVoiceFileSelect" class="form-control">
+                  <option value="voice_approve_command.wav">voice_approve_command.wav (Budget & Priority escalation)</option>
+                  <option value="voice_reassess_risk.m4a">voice_reassess_risk.m4a (Executive Risk Re-evaluation)</option>
+                  <option value="voice_reject_order.mp3">voice_reject_order.mp3 (Order Rejection Directive)</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" onclick="dispatchVoiceCommand()" style="width: 100%;">🎙️ Process Voice Memo via Gemini Flash</button>
+              
+              <div id="voiceResultBox" style="margin-top: 14px; display: none; background: var(--bg-card-sub); padding: 10px; border-radius: 6px; border: 1px solid var(--card-border); font-size: 0.8rem;">
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
     </main>
   </div>

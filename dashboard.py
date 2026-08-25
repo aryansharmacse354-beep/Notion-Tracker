@@ -500,6 +500,7 @@ st.markdown(f"""
             <div style="font-size: 0.72rem; text-transform: uppercase; color: #94a3b8; font-weight: 700;">{t("active_operator", lang=cur_lang)}</div>
             <div style="font-size: 1.05rem; font-weight: 700; color: #ffffff;">{st.session_state.active_user} <span style="font-size: 0.82rem; color: #f59e0b; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); padding: 2px 8px; border-radius: 10px; margin-left: 4px;">{active_flame}</span></div>
             <div style="font-size: 0.75rem; color: #10b981; font-weight: 600; margin-top: 2px;">{t("pipeline_active", lang=cur_lang)}</div>
+            <a href="http://localhost:8000" target="_blank" style="display: inline-block; margin-top: 6px; font-size: 0.72rem; color: #c7d2fe; text-decoration: none; background: rgba(99,102,241,0.25); border: 1px solid #818cf8; padding: 2px 8px; border-radius: 6px; font-weight: 600;">⚡ Single-Page App (8000) ↗</a>
         </div>
     </div>
 </div>
