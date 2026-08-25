@@ -119,6 +119,65 @@ def verify_ledger():
     return AuditLedger.verify_ledger_chain(logs)
 
 
+from report_builder import PDFReportBuilder
+import io
+import csv
+
+
+@app.get("/api/v1/export/pdf")
+def export_audit_pdf():
+    """Generates and downloads the executive-grade PDF audit report."""
+    tasks = default_store.list_tasks(include_archived=True)
+    logs = default_store.list_audit_logs()
+    pdf_bytes = PDFReportBuilder.generate_task_audit_pdf(tasks, logs)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=notion_tracker_audit_report.pdf"},
+    )
+
+
+@app.get("/api/v1/export/csv")
+def export_audit_csv():
+    """Exports audit logs and tasks as formatted CSV for Excel."""
+    logs = default_store.list_audit_logs()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Log ID", "Record ID", "Run Name", "Action / Status", "Operator", "Timestamp", "SHA-256 Signature", "Prev Signature"])
+    for l in logs:
+        p_title = l.get("payload_data", {}).get("title", l.get("record_id", ""))
+        writer.writerow([
+            l.get("id"),
+            l.get("record_id"),
+            p_title,
+            l.get("action"),
+            l.get("operator_name"),
+            l.get("timestamp"),
+            l.get("signature"),
+            l.get("prev_signature"),
+        ])
+    csv_bytes = output.getvalue().encode("utf-8")
+    return Response(
+        content=csv_bytes,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=notion_tracker_audit_ledger.csv"},
+    )
+
+
+@app.post("/api/v1/ledger/tamper-test")
+def simulate_tamper_test():
+    """Injects a simulated in-memory signature corruption to test tamper detection."""
+    logs = default_store.list_audit_logs()
+    if not logs:
+        return {"status": "ALERT", "recalculated_records": 0, "mismatches_detected": 1, "tampered_pages": [{"entry_id": 1, "expected_signature": "tampered_mock", "recalculated_signature": "corrupt"}]}
+    
+    # Clone and mutate record #1
+    tampered_logs = [dict(entry) for entry in logs]
+    tampered_logs[0]["payload_data"] = dict(tampered_logs[0].get("payload_data", {}))
+    tampered_logs[0]["payload_data"]["title"] = "UNAUTHORIZED_TAMPERED_PAYLOAD_DATA"
+    return AuditLedger.verify_ledger_chain(tampered_logs)
+
+
 from deduplication_engine import default_deduplicator
 import traceback
 
@@ -126,6 +185,7 @@ import traceback
 class StageDraftRequest(BaseModel):
     edited_draft: str
     operator_name: Optional[str] = "Operator"
+
 
 
 @app.get("/api/v1/dlq")
@@ -148,6 +208,151 @@ def resolve_dlq_task(task_id: str, operator_name: str = "Technical Auditor"):
         operator_name=operator_name,
     )
     return {"status": "RESOLVED", "task": updated}
+
+
+@app.get("/api/v1/tasks")
+def list_tasks():
+    """Returns all active registered tasks from the live Notion store."""
+    return default_store.list_tasks(include_archived=False)
+
+
+@app.get("/api/v1/tasks/{task_id}")
+def get_task(task_id: str):
+    """Retrieves a specific task record."""
+    task = default_store.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    return task
+
+
+class ApproveTaskRequest(BaseModel):
+    operator_name: Optional[str] = "Aryan Sharma"
+    edited_draft: Optional[str] = None
+
+
+@app.post("/api/v1/tasks/{task_id}/approve")
+def approve_task(task_id: str, req: ApproveTaskRequest = ApproveTaskRequest()):
+    """Stage 3 HITL: Approves a task with OCC, prioritizing human-edited draft wording."""
+    task = default_store.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    
+    local_updates = {"status": "Approved"}
+    if req.edited_draft:
+        local_updates["edited_draft"] = req.edited_draft
+        local_updates["draft_teams_text"] = req.edited_draft
+
+    updated, conflict, details = default_store.update_task_with_occ(
+        task_id=task_id,
+        base_record=task,
+        local_updates=local_updates,
+        operator_name=req.operator_name or "Aryan Sharma",
+    )
+    return {"status": "APPROVED", "task": updated, "conflict": conflict, "details": details}
+
+
+@app.post("/api/v1/tasks/{task_id}/reject")
+def reject_task(task_id: str, reason: str = "Rejected by Operator", operator_name: str = "Aryan Sharma"):
+    """Rejects a task with OCC state transition."""
+    task = default_store.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    
+    updated, conflict, details = default_store.update_task_with_occ(
+        task_id=task_id,
+        base_record=task,
+        local_updates={"status": "Rejected"},
+        operator_name=operator_name,
+    )
+    return {"status": "REJECTED", "task": updated, "conflict": conflict}
+
+
+class BatchApproveRequest(BaseModel):
+    task_ids: list[str]
+    operator_name: Optional[str] = "Aryan Sharma"
+
+
+@app.post("/api/v1/tasks/batch-approve")
+def batch_approve_tasks(req: BatchApproveRequest):
+    """Notion Native Multi-Select Batch Approvals."""
+    results = []
+    for tid in req.task_ids:
+        task = default_store.get_task(tid)
+        if task:
+            updated, conflict, _ = default_store.update_task_with_occ(
+                task_id=tid,
+                base_record=task,
+                local_updates={"status": "Approved"},
+                operator_name=req.operator_name or "Aryan Sharma [Batch]",
+            )
+            results.append({"task_id": tid, "status": "Approved", "version": updated.get("version")})
+    return {"status": "BATCH_APPROVED", "count": len(results), "items": results}
+
+
+@app.get("/api/v1/audit-logs")
+def list_audit_logs():
+    """Returns cryptographic audit log ledger entries."""
+    return default_store.list_audit_logs()
+
+
+@app.get("/api/v1/system-config")
+def get_system_config():
+    """Returns runtime daemon configuration."""
+    return default_store.get_system_config()
+
+
+@app.post("/api/v1/system-config")
+def update_system_config(cfg: Dict[str, Any]):
+    """Updates runtime daemon configuration."""
+    return default_store.update_system_config(cfg)
+
+
+@app.post("/api/v1/daemon/sync-now")
+def trigger_daemon_sync():
+    """Triggers an immediate unified daemon process cycle."""
+    from main import NotionTrackerDaemon
+    daemon = NotionTrackerDaemon()
+    dispatched = daemon.process_cycle()
+    return {"status": "SYNC_COMPLETE", "dispatched_count": dispatched}
+
+
+class CommentCommandRequest(BaseModel):
+    task_id: str
+    comment_text: str
+    author_name: Optional[str] = "Aryan Sharma"
+
+
+@app.post("/api/v1/comment/process")
+def process_comment_command(req: CommentCommandRequest):
+    """Processes natural language @AI comment command."""
+    from notion_comment_agent import NotionCommentAgent
+    ok, response_msg = NotionCommentAgent.process_comment(
+        task_id=req.task_id,
+        comment_text=req.comment_text,
+        author_name=req.author_name or "Aryan Sharma",
+    )
+    task = default_store.get_task(req.task_id)
+    return {"success": ok, "response": response_msg, "task": task}
+
+
+class VoiceCommandRequest(BaseModel):
+    task_id: str
+    audio_file: str
+    operator_name: Optional[str] = "Aryan Sharma"
+
+
+@app.post("/api/v1/voice/process")
+def process_voice_command(req: VoiceCommandRequest):
+    """Processes native Gemini 1.5 Flash voice command."""
+    from notion_voice_agent import default_voice_agent
+    parsed = default_voice_agent.process_voice_command(req.audio_file)
+    exec_res = default_voice_agent.execute_voice_command_in_notion(
+        task_id=req.task_id,
+        command_data=parsed,
+        operator_name=req.operator_name or "Aryan Sharma",
+    )
+    task = default_store.get_task(req.task_id)
+    return {"success": True, "analysis": parsed, "execution": exec_res, "task": task}
 
 
 @app.post("/api/v1/tasks/{task_id}/stage-draft")
@@ -282,6 +487,7 @@ async def ingest_webhook(
             "risk_level": audit_res.risk_level,
             "confidence_score": audit_res.confidence_score,
             "reasoning_trace": audit_res.reasoning_trace,
+            "ai_reasoning_ledger": audit_res.ai_reasoning_ledger,
             "draft_summary": audit_res.draft_summary,
             "draft_email_html": audit_res.draft_email_html,
             "draft_teams_text": audit_res.draft_teams_text,
@@ -305,6 +511,7 @@ async def ingest_webhook(
                     "confidence_score": audit_res.confidence_score,
                     "category": audit_res.category,
                 },
+                "ai_reasoning_ledger": audit_res.ai_reasoning_ledger,
                 "proposed_ai_draft": audit_res.proposed_ai_draft,
             },
         )
