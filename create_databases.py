@@ -47,6 +47,8 @@ TASKS_DB_SCHEMA = {
                     {"name": "Approved", "color": "green"},
                     {"name": "Dispatched", "color": "blue"},
                     {"name": "Rejected", "color": "red"},
+                    {"name": "DLQ: Needs Technical Review", "color": "purple"},
+                    {"name": "DLQ: Technical Review", "color": "red"},
                 ]
             }
         },
@@ -70,13 +72,37 @@ TASKS_DB_SCHEMA = {
                 ]
             }
         },
-        "Category": {"select": {"options": [{"name": "General"}, {"name": "Academic Registration"}, {"name": "Security"}, {"name": "Infrastructure"}]}},
+        "Category": {"select": {"options": [{"name": "General"}, {"name": "Academic Registration"}, {"name": "Security"}, {"name": "Infrastructure"}, {"name": "DLQ Exception"}]}},
         "Budget": {"rich_text": {}},
+        "AI Reasoning Ledger": {"rich_text": {}},
+        "Proposed AI Draft": {"rich_text": {}},
+        "Edited Draft": {"rich_text": {}},
+        "Ingestion Fingerprint": {"rich_text": {}},
+        "DLQ Error Trace": {"rich_text": {}},
+        "DLQ Reason": {"rich_text": {}},
         "Confidence Score": {"number": {"format": "percent"}},
         "OCC Version": {"number": {"format": "number"}},
         "Source Gateway": {"rich_text": {}},
         "Created At": {"date": {}},
     }
+}
+
+# Notion Dead-Letter Queue (DLQ) Gallery View Specification
+DLQ_GALLERY_VIEW_SPEC = {
+    "name": "Needs Technical Review (DLQ)",
+    "type": "gallery",
+    "filter": {
+        "or": [
+            {"property": "Status", "select": {"equals": "DLQ: Needs Technical Review"}},
+            {"property": "Status", "select": {"equals": "DLQ: Technical Review"}},
+        ]
+    },
+    "gallery": {
+        "card_size": "medium",
+        "card_cover": {"type": "none"},
+        "card_preview": "page_content",
+    },
+    "properties": ["Task Name", "Status", "Risk Level", "DLQ Reason", "Created At"],
 }
 
 RUN_LOGS_DB_SCHEMA = {
@@ -204,6 +230,13 @@ def provision_sqlite_database(db_path: str = str(DB_FILE)) -> Dict[str, Any]:
             draft_summary TEXT,
             draft_email_html TEXT,
             draft_teams_text TEXT,
+            proposed_ai_draft TEXT,
+            edited_draft TEXT,
+            ingestion_fingerprint TEXT,
+            dlq_error_trace TEXT,
+            dlq_reason TEXT,
+            audio_file TEXT,
+            comment_thread TEXT,
             source TEXT DEFAULT 'Webhook',
             version INTEGER DEFAULT 1,
             nonce TEXT,
@@ -211,6 +244,33 @@ def provision_sqlite_database(db_path: str = str(DB_FILE)) -> Dict[str, Any]:
             created_at REAL,
             updated_at REAL,
             archived INTEGER DEFAULT 0
+        )
+    """)
+
+    # Ensure all columns exist for existing databases
+    for col, col_type in [
+        ("budget", "TEXT DEFAULT '$0'"),
+        ("ai_reasoning_ledger", "TEXT"),
+        ("proposed_ai_draft", "TEXT"),
+        ("edited_draft", "TEXT"),
+        ("ingestion_fingerprint", "TEXT"),
+        ("dlq_error_trace", "TEXT"),
+        ("dlq_reason", "TEXT"),
+        ("audio_file", "TEXT"),
+        ("comment_thread", "TEXT"),
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE tasks ADD COLUMN {col} {col_type}")
+        except Exception:
+            pass
+
+    # Ingestion Fingerprints Table (Deduplication Authority)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ingestion_fingerprints (
+            fingerprint TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL,
+            created_at REAL NOT NULL,
+            payload_summary TEXT
         )
     """)
 

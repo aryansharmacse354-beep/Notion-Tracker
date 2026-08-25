@@ -72,7 +72,7 @@ class AuditLedger:
         recalculated_count = 0
         mismatches: List[Dict[str, Any]] = []
         chain_valid = True
-        expected_prev_hash = cls.GENESIS_HASH
+        expected_prev_hash = log_entries[0].get("prev_signature", cls.GENESIS_HASH) if log_entries else cls.GENESIS_HASH
 
         for idx, entry in enumerate(log_entries):
             recalculated_count += 1
@@ -80,7 +80,7 @@ class AuditLedger:
             prev_sig_in_entry = entry.get("prev_signature", cls.GENESIS_HASH)
 
             # Check chain link
-            if prev_sig_in_entry != expected_prev_hash:
+            if idx > 0 and prev_sig_in_entry != expected_prev_hash:
                 chain_valid = False
 
             # Recalculate signature

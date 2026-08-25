@@ -56,6 +56,19 @@ class NotionTypesetter:
             },
         })
 
+        # 1b. AI Reasoning Ledger Callout (Natural Language Justification)
+        reasoning_ledger = task_data.get("ai_reasoning_ledger") or audit_result.get("ai_reasoning_ledger", "")
+        if reasoning_ledger:
+            blocks.append({
+                "object": "block",
+                "type": "callout",
+                "callout": {
+                    "rich_text": [{"type": "text", "text": {"content": f"🧠 AI Reasoning Ledger:\n{reasoning_ledger}"}}],
+                    "icon": {"emoji": "💡"},
+                    "color": "gray_background",
+                },
+            })
+
         # 2. Section Heading: Executive Overview
         blocks.append({
             "object": "block",
@@ -174,7 +187,7 @@ class NotionTypesetter:
         })
 
         # 8. Dead-Letter Queue (DLQ) Diagnostic Block (If in DLQ status)
-        if task_data.get("status") == "DLQ: Needs Technical Review" or task_data.get("dlq_error_trace"):
+        if task_data.get("status") in ("DLQ: Needs Technical Review", "DLQ: Technical Review") or task_data.get("dlq_error_trace"):
             reason_str = task_data.get("dlq_reason", "Unhandled processing exception")
             trace_str = task_data.get("dlq_error_trace", "No traceback provided.")
             blocks.append({
@@ -207,6 +220,47 @@ class NotionTypesetter:
         })
 
         return blocks
+
+    @staticmethod
+    def build_dlq_diagnostic_blocks(
+        task_data: Dict[str, Any],
+        error_trace: str,
+        reason: str = "Unhandled Processing Exception",
+        lang: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Generates dedicated Dead-Letter Queue (DLQ) diagnostic blocks for Notion page body."""
+        title = task_data.get("title", "Unknown Task")
+        task_id = task_data.get("id", "N/A")
+        return [
+            {
+                "object": "block",
+                "type": "callout",
+                "callout": {
+                    "rich_text": [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": f"🚨 DEAD-LETTER QUEUE (DLQ) — TECHNICAL REVIEW REQUIRED\n"
+                                           f"Task: {title} (#{task_id})\n"
+                                           f"Reason: {reason}\n"
+                                           f"Action: Quarantined automatically by System Guard. Backend operational loop preserved."
+                            }
+                        }
+                    ],
+                    "icon": {"emoji": "🛠️"},
+                    "color": "red_background",
+                }
+            },
+            {
+                "object": "block",
+                "type": "code",
+                "code": {
+                    "rich_text": [{"type": "text", "text": {"content": error_trace}}],
+                    "language": "plain text",
+                }
+            },
+            {"object": "block", "type": "divider", "divider": {}},
+        ]
 
 
     @staticmethod

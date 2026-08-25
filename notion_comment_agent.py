@@ -61,6 +61,7 @@ class NotionCommentAgent:
                     "confidence_score": audit_res.confidence_score,
                     "reasoning_trace": audit_res.reasoning_trace,
                     "draft_summary": audit_res.draft_summary,
+                    "ai_reasoning_ledger": audit_res.ai_reasoning_ledger,
                 },
                 operator_name=f"{author_name} [@AI Comment Agent]",
             )
@@ -178,4 +179,58 @@ class NotionCommentAgent:
                 "• `@AI escalate` — Sets priority to Critical and Risk to CRITICAL\n"
                 "• `@AI summarize` — Generates a concise status breakdown"
             )
+
+    @classmethod
+    def poll_and_process_pending_comments(cls, store=default_store, notion_client=None) -> int:
+        """Polls active tasks for comments containing @AI and executes them.
+
+        Args:
+            store: The NotionStore instance.
+            notion_client: Optional Notion SDK client.
+
+        Returns:
+            Number of @AI comments processed in this cycle.
+        """
+        from notion_enterprise_guard import default_rate_limiter
+        processed_count = 0
+        all_tasks = store.list_tasks(include_archived=False)
+
+        for task in all_tasks:
+            task_id = task.get("id")
+            # 1. If Notion Client is configured, query page comments
+            if notion_client and hasattr(notion_client, "comments"):
+                try:
+                    default_rate_limiter.acquire(1.0)
+                    comments_resp = notion_client.comments.list(block_id=task_id)
+                    for comment_obj in comments_resp.get("results", []):
+                        rich_texts = comment_obj.get("rich_text", [])
+                        full_text = "".join(r.get("plain_text", "") for r in rich_texts)
+                        if "@AI" in full_text:
+                            author = comment_obj.get("created_by", {}).get("name", "Notion Operator")
+                            ok, reply = cls.process_comment(task_id, full_text, author)
+                            if ok:
+                                processed_count += 1
+                                # Post AI response back to Notion comment thread
+                                default_rate_limiter.acquire(1.0)
+                                notion_client.comments.create(
+                                    parent={"page_id": task_id},
+                                    rich_text=[{"text": {"content": reply}}]
+                                )
+                except Exception as e:
+                    logger.debug(f"Comment polling skipped for {task_id}: {e}")
+
+            # 2. Check locally queued or task-level comments
+            comment_thread = task.get("comment_thread") or task.get("comments")
+            if comment_thread and isinstance(comment_thread, str) and "@AI" in comment_thread and not comment_thread.startswith("[Processed]"):
+                ok, reply = cls.process_comment(task_id, comment_thread, "Aryan Sharma")
+                if ok:
+                    processed_count += 1
+                    latest_rec = store.get_task(task_id) or task
+                    store.update_task_with_occ(
+                        task_id=task_id,
+                        base_record=latest_rec,
+                        local_updates={"comment_thread": f"[Processed] {comment_thread}"},
+                        operator_name="Comment Agent Daemon",
+                    )
+        return processed_count
 

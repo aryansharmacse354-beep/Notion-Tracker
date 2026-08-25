@@ -261,6 +261,103 @@ class TestNotionTrackerSuite(unittest.TestCase):
         self.assertIsNotNone(auth_result["security_seal"])
         self.assertEqual(len(auth_result["security_seal"]), 64)
 
+    def test_draft_and_diff_staging_override(self):
+        """Stage 3 Blueprint Gap: Human staged revisions override AI proposed draft."""
+        from notion_store import default_store
+        from outbound_dispatcher import TeamsAdaptiveCardBuilder
+
+        task_id = f"test_stg_suite_{random.randint(1000, 9999)}"
+        default_store.create_task({
+            "id": task_id,
+            "title": "Lab Group Provisioning",
+            "details": "Register 25 workstations",
+            "proposed_ai_draft": "AI Draft: Auto provision 25 workstations",
+            "status": "Ready for Review",
+        }, operator_name="Test Ingest")
+
+        human_refined = "Human Operator Revised: Certified 25 student lab seats in Science Wing B."
+        updated = default_store.update_staged_draft(task_id, human_refined, operator_name="Aryan Sharma")
+        self.assertEqual(updated["edited_draft"], human_refined)
+
+        # Outbound card verification
+        card = TeamsAdaptiveCardBuilder.build_card_payload(updated, "Aryan Sharma")
+        card_str = str(card)
+        self.assertIn(human_refined, card_str)
+        self.assertIn("Human-Edited", card_str)
+
+    def test_dead_letter_queue_quarantine_flow(self):
+        """Stage 5 Blueprint Gap: Corrupt or failing tasks quarantined in DLQ with traceback."""
+        from notion_store import default_store
+
+        corrupt_id = f"test_dlq_suite_{random.randint(1000, 9999)}"
+        default_store.create_task({
+            "id": corrupt_id,
+            "title": "Corrupt Ingestion Test",
+            "status": "Ready for Review",
+        })
+
+        mock_err = "TypeError: 'NoneType' object is not subscriptable at line 44"
+        dlq_task = default_store.route_to_dlq(
+            task_id=corrupt_id,
+            error_trace=mock_err,
+            reason="TypeError in Parser",
+            operator_name="DLQ Test Guard",
+        )
+        self.assertEqual(dlq_task["status"], "DLQ: Needs Technical Review")
+        self.assertIn("TypeError", dlq_task["dlq_error_trace"])
+
+        dlq_all = default_store.get_dlq_tasks()
+        self.assertTrue(any(t["id"] == corrupt_id for t in dlq_all))
+
+    def test_deduplication_fingerprinting_protection(self):
+        """Stage 1 Blueprint Gap: SHA-256 Deduplication Fingerprint prevents double submissions within 1-hour."""
+        from deduplication_engine import DeduplicationFingerprinter
+
+        dedup = DeduplicationFingerprinter(default_window_seconds=3600)
+        fp1 = dedup.compute_fingerprint(
+            title="Database Backup Routine",
+            details="Backup schema on replica",
+            source="AWS Gateway",
+            sender="admin@enterprise.io",
+        )
+        fp2 = dedup.compute_fingerprint(
+            title="  database backup routine  ",
+            details="backup schema on replica",
+            source="AWS Gateway",
+            sender="ADMIN@ENTERPRISE.IO",
+        )
+        self.assertEqual(fp1, fp2)
+
+        is_uniq1, _, _ = dedup.check_and_record(fp1, "task_001")
+        self.assertTrue(is_uniq1)
+
+        is_uniq2, orig_id, msg = dedup.check_and_record(fp1, "task_002")
+        self.assertFalse(is_uniq2)
+        self.assertEqual(orig_id, "task_001")
+
+    def test_ai_reasoning_ledger_notion_property(self):
+        """Stage 2 Blueprint Gap: AI Pre-Audit computes concise 1-2 sentence justification in AI Reasoning Ledger."""
+        from ai_audit_engine import AIAuditEngine
+        from notion_store import default_store
+
+        audit = AIAuditEngine.analyze_task(
+            title="Purge Logs and Export Database",
+            details="Delete historical access records and export CSV to S3.",
+            requested_priority="critical",
+        )
+        self.assertIn("Classified as CRITICAL risk", audit.ai_reasoning_ledger)
+        self.assertIn("Purge Logs and Export Database", audit.ai_reasoning_ledger)
+
+        task_id = f"test_ledger_st_{random.randint(1000, 9999)}"
+        created = default_store.create_task({
+            "id": task_id,
+            "title": "Purge Logs and Export Database",
+            "details": "Delete historical access records and export CSV to S3.",
+            "status": "Ready for Review",
+            "ai_reasoning_ledger": audit.ai_reasoning_ledger,
+        })
+        self.assertEqual(created["ai_reasoning_ledger"], audit.ai_reasoning_ledger)
+
 
 if __name__ == "__main__":
     unittest.main()

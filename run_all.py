@@ -14,7 +14,7 @@ from config import GATEWAY_HOST, GATEWAY_PORT, DASHBOARD_PORT
 
 def start_all_services():
     print("=" * 65)
-    print(" 🚀 STARTING NOTION TRACKER ENTERPRISE SERVICES")
+    print(" [*] STARTING NOTION TRACKER ENTERPRISE SERVICES")
     print("=" * 65)
 
     processes = []
@@ -46,27 +46,32 @@ def start_all_services():
         processes.append(("Streamlit Dashboard", p_ui))
 
         print("\n" + "=" * 65)
-        print(" ✅ ALL NOTION TRACKER SERVICES RUNNING")
-        print(f" • Webhook Ingestion URL: http://127.0.0.1:{GATEWAY_PORT}/v1/webhook/ingest")
-        print(f" • Streamlit Dashboard:   http://127.0.0.1:{DASHBOARD_PORT}")
-        print(f" • Throttle Status:       http://127.0.0.1:{GATEWAY_PORT}/api/v1/throttle-state")
+        print(" [OK] ALL NOTION TRACKER SERVICES RUNNING")
+        print(f" * Webhook Ingestion URL: http://127.0.0.1:{GATEWAY_PORT}/v1/webhook/ingest")
+        print(f" * Streamlit Dashboard:   http://127.0.0.1:{DASHBOARD_PORT}")
+        print(f" * Throttle Status:       http://127.0.0.1:{GATEWAY_PORT}/api/v1/throttle-state")
 
-        print(f" • Signature Verifier:    python verify_signatures.py")
+        print(f" * Signature Verifier:    python verify_signatures.py")
         print(" Press Ctrl+C to terminate all services.")
         print("=" * 65 + "\n")
 
         while True:
-            time.sleep(1)
+            for name, proc in processes:
+                ret = proc.poll()
+                if ret is not None:
+                    print(f"[!] Warning: {name} (PID {proc.pid}) stopped with code {ret}.")
+            time.sleep(2)
 
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         print("\n[*] Stopping Notion Tracker services...")
         for name, proc in processes:
-            print(f"[*] Terminating {name} (PID {proc.pid})...")
-            proc.terminate()
-            try:
-                proc.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                proc.kill()
+            if proc.poll() is None:
+                print(f"[*] Terminating {name} (PID {proc.pid})...")
+                proc.terminate()
+                try:
+                    proc.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
         print("[*] All services stopped cleanly.")
 
 

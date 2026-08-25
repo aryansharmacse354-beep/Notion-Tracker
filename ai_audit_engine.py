@@ -28,6 +28,7 @@ class TaskPreAuditResult:
         draft_teams_text: str,
         security_flags: List[str],
         proposed_ai_draft: Optional[str] = None,
+        ai_reasoning_ledger: Optional[str] = None,
     ):
         self.risk_level = risk_level  # "LOW", "MEDIUM", "HIGH", "CRITICAL"
         self.confidence_score = confidence_score  # 0.0 to 1.0
@@ -38,6 +39,7 @@ class TaskPreAuditResult:
         self.draft_email_html = draft_email_html
         self.draft_teams_text = draft_teams_text
         self.proposed_ai_draft = proposed_ai_draft or draft_teams_text
+        self.ai_reasoning_ledger = ai_reasoning_ledger or ""
         self.security_flags = security_flags
 
     def to_dict(self) -> Dict[str, Any]:
@@ -51,6 +53,7 @@ class TaskPreAuditResult:
             "draft_email_html": self.draft_email_html,
             "draft_teams_text": self.draft_teams_text,
             "proposed_ai_draft": self.proposed_ai_draft,
+            "ai_reasoning_ledger": self.ai_reasoning_ledger,
             "security_flags": self.security_flags,
             "audited_at": time.time(),
         }
@@ -163,6 +166,24 @@ class AIAuditEngine:
 </div>"""
 
 
+        # Step 6: AI Reasoning Ledger (Concise 1-2 sentence natural language explanation)
+        if risk_level in ("HIGH", "CRITICAL"):
+            ai_reasoning_ledger = (
+                f"Classified as {risk_level} risk ({int(confidence_score * 100)}% confidence) under '{category}' "
+                f"due to sensitive operational scope and keywords in '{title_str[:45]}'. "
+                f"Requires human-in-the-loop review before dispatch."
+            )
+        elif risk_level == "MEDIUM":
+            ai_reasoning_ledger = (
+                f"Assessed as MEDIUM risk ({int(confidence_score * 100)}% confidence) under '{category}'. "
+                f"Operational provisioning workflow staged for operator review."
+            )
+        else:
+            ai_reasoning_ledger = (
+                f"Assessed as LOW risk ({int(confidence_score * 100)}% confidence) under '{category}'. "
+                f"Standard routine execution task staged for dispatch."
+            )
+
         return TaskPreAuditResult(
             risk_level=risk_level,
             confidence_score=confidence_score,
@@ -174,5 +195,6 @@ class AIAuditEngine:
             draft_teams_text=draft_teams_text,
             security_flags=security_flags,
             proposed_ai_draft=draft_teams_text,
+            ai_reasoning_ledger=ai_reasoning_ledger,
         )
 

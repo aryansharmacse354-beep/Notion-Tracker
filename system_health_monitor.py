@@ -80,5 +80,5 @@ class SystemHealthMonitor:
         from notion_store import default_store
         metrics = cls.collect_metrics()
         record = default_store.record_system_health_heartbeat(metrics)
-        logger.info(f"❤️ [HEARTBEAT] System Health: {metrics['status']} | CPU: {metrics['cpu_percent']}% | RAM: {metrics['ram_percent']}% | Tokens: {metrics['available_tokens']}")
+        logger.info(f"[HEARTBEAT] System Health: {metrics['status']} | CPU: {metrics['cpu_percent']}% | RAM: {metrics['ram_percent']}% | Tokens: {metrics['available_tokens']}")
         return record

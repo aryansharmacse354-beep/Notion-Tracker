@@ -281,6 +281,34 @@ class NotionVoiceCommandAgent:
             "task_id": task_id,
         }
 
+    def poll_and_process_pending_voice_memos(self, store=default_store) -> int:
+        """Polls pending tasks for attached audio files / voice recordings and executes them.
+
+        Args:
+            store: The NotionStore instance.
+
+        Returns:
+            Number of voice memos processed in this cycle.
+        """
+        processed_count = 0
+        all_tasks = store.list_tasks(include_archived=False)
+        for task in all_tasks:
+            audio_file = task.get("audio_file") or task.get("voice_memo") or task.get("audio_url")
+            if audio_file and not str(audio_file).startswith("[Processed]"):
+                logger.info(f"🎙️ Found pending voice memo on task {task.get('id')}: {audio_file}")
+                default_rate_limiter.acquire(1.0)
+                parsed = self.process_voice_command(str(audio_file), context_details=task.get("details", ""))
+                self.execute_voice_command_in_notion(task.get("id"), parsed, operator_name="Voice Agent Daemon")
+                latest_rec = store.get_task(task.get("id")) or task
+                store.update_task_with_occ(
+                    task_id=task.get("id"),
+                    base_record=latest_rec,
+                    local_updates={"audio_file": f"[Processed] {audio_file}"},
+                    operator_name="Voice Agent Daemon",
+                )
+                processed_count += 1
+        return processed_count
+
 
 # Global default instance
 default_voice_agent = NotionVoiceCommandAgent()

@@ -18,7 +18,7 @@ logger = logging.getLogger("notion_tracker.deduplication")
 class DeduplicationFingerprinter:
     """Enterprise Deduplication Fingerprint Authority."""
 
-    def __init__(self, default_window_seconds: int = 600):
+    def __init__(self, default_window_seconds: int = 3600):
         self.default_window_seconds = default_window_seconds
         # In-memory fast cache: fingerprint -> (timestamp, task_id)
         self._seen_cache: Dict[str, Tuple[float, str]] = {}
@@ -116,5 +116,5 @@ class DeduplicationFingerprinter:
         self._seen_cache.clear()
 
 
-# Default singleton instance
-default_deduplicator = DeduplicationFingerprinter(default_window_seconds=600)
+# Default singleton instance (1-hour window)
+default_deduplicator = DeduplicationFingerprinter(default_window_seconds=3600)

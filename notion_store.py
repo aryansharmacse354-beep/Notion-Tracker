@@ -87,11 +87,14 @@ class NotionStore:
                     version INTEGER DEFAULT 1,
                     nonce TEXT,
                     budget TEXT DEFAULT '$0',
+                    ai_reasoning_ledger TEXT,
                     proposed_ai_draft TEXT,
                     edited_draft TEXT,
                     ingestion_fingerprint TEXT,
                     dlq_error_trace TEXT,
                     dlq_reason TEXT,
+                    audio_file TEXT,
+                    comment_thread TEXT,
                     created_at REAL,
                     updated_at REAL,
                     archived INTEGER DEFAULT 0
@@ -101,11 +104,14 @@ class NotionStore:
             # Ensure newly added columns exist for existing tables
             for col, col_type in [
                 ("budget", "TEXT DEFAULT '$0'"),
+                ("ai_reasoning_ledger", "TEXT"),
                 ("proposed_ai_draft", "TEXT"),
                 ("edited_draft", "TEXT"),
                 ("ingestion_fingerprint", "TEXT"),
                 ("dlq_error_trace", "TEXT"),
                 ("dlq_reason", "TEXT"),
+                ("audio_file", "TEXT"),
+                ("comment_thread", "TEXT"),
             ]:
                 try:
                     cursor.execute(f"ALTER TABLE tasks ADD COLUMN {col} {col_type}")
@@ -343,9 +349,12 @@ class NotionStore:
             "draft_teams_text": task_dict.get("draft_teams_text", ""),
             "proposed_ai_draft": task_dict.get("proposed_ai_draft", task_dict.get("draft_teams_text", "")),
             "edited_draft": task_dict.get("edited_draft", None),
+            "ai_reasoning_ledger": task_dict.get("ai_reasoning_ledger", ""),
             "ingestion_fingerprint": task_dict.get("ingestion_fingerprint", None),
             "dlq_error_trace": task_dict.get("dlq_error_trace", None),
             "dlq_reason": task_dict.get("dlq_reason", None),
+            "audio_file": task_dict.get("audio_file", None),
+            "comment_thread": task_dict.get("comment_thread", None),
             "source": task_dict.get("source", "Webhook"),
             "version": task_dict.get("version", 1),
             "nonce": task_dict.get("nonce", nonce),
@@ -360,14 +369,14 @@ class NotionStore:
             cursor.execute("""
                 INSERT INTO tasks (id, title, details, priority, category, status, risk_level,
                                    confidence_score, reasoning_trace, draft_summary, draft_email_html,
-                                   draft_teams_text, proposed_ai_draft, edited_draft, ingestion_fingerprint,
-                                   dlq_error_trace, dlq_reason, source, version, nonce, budget,
-                                   created_at, updated_at, archived)
+                                   draft_teams_text, proposed_ai_draft, edited_draft, ai_reasoning_ledger,
+                                   ingestion_fingerprint, dlq_error_trace, dlq_reason, audio_file,
+                                   comment_thread, source, version, nonce, budget, created_at, updated_at, archived)
                 VALUES (:id, :title, :details, :priority, :category, :status, :risk_level,
                         :confidence_score, :reasoning_trace, :draft_summary, :draft_email_html,
-                        :draft_teams_text, :proposed_ai_draft, :edited_draft, :ingestion_fingerprint,
-                        :dlq_error_trace, :dlq_reason, :source, :version, :nonce, :budget,
-                        :created_at, :updated_at, :archived)
+                        :draft_teams_text, :proposed_ai_draft, :edited_draft, :ai_reasoning_ledger,
+                        :ingestion_fingerprint, :dlq_error_trace, :dlq_reason, :audio_file,
+                        :comment_thread, :source, :version, :nonce, :budget, :created_at, :updated_at, :archived)
             """, record)
             conn.commit()
 
@@ -423,6 +432,9 @@ class NotionStore:
     ) -> Optional[Dict[str, Any]]:
         """Stage 5 DLQ: Isolates a failed/corrupt task into DLQ: Needs Technical Review.
 
+        Updates status, stores error traceback, appends non-repudiation audit log,
+        and programmatically typesets a red warning callout block inside the Notion page body.
+
         Args:
             task_id: Identifier of the corrupt/failed task.
             error_trace: Full formatted traceback or parser error text.
@@ -446,12 +458,37 @@ class NotionStore:
             """, (error_trace, reason, now, task_id))
             conn.commit()
 
+        task = self.get_task(task_id) or {"id": task_id, "title": task_id}
+
         self.append_audit_log(
             record_id=task_id,
             action="ROUTED_TO_DLQ",
             operator_name=operator_name,
-            payload_data={"reason": reason, "status": "DLQ: Needs Technical Review"},
+            payload_data={"reason": reason, "status": "DLQ: Needs Technical Review", "error_summary": str(reason)[:200]},
         )
+
+        # Stage 5 Typesetting: If Notion API is active, append red warning callout + traceback code blocks
+        if STORAGE_MODE in ("live", "hybrid") and NOTION_TOKEN and requests:
+            try:
+                default_rate_limiter.acquire(1.0)
+                dlq_blocks = NotionTypesetter.build_dlq_diagnostic_blocks(
+                    task_data=task,
+                    error_trace=error_trace,
+                    reason=reason,
+                )
+                url = f"https://api.notion.com/v1/blocks/{task_id}/children"
+                headers = {
+                    "Authorization": f"Bearer {NOTION_TOKEN}",
+                    "Notion-Version": "2022-06-28",
+                    "Content-Type": "application/json",
+                }
+                requests.patch(url, headers=headers, json={"children": dlq_blocks}, timeout=5.0)
+                # Update page property to DLQ
+                page_url = f"https://api.notion.com/v1/pages/{task_id}"
+                requests.patch(page_url, headers=headers, json={"properties": {"Status": {"select": {"name": "DLQ: Needs Technical Review"}}}}, timeout=5.0)
+            except Exception as e:
+                logger.warning(f"Could not push DLQ blocks to Notion API for task {task_id}: {e}")
+
         return self.get_task(task_id)
 
     def get_dlq_tasks(self) -> List[Dict[str, Any]]:
@@ -460,7 +497,7 @@ class NotionStore:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT * FROM tasks
-                WHERE status = 'DLQ: Needs Technical Review'
+                WHERE status IN ('DLQ: Needs Technical Review', 'DLQ: Technical Review')
                 ORDER BY updated_at DESC
             """)
             rows = cursor.fetchall()
@@ -479,9 +516,9 @@ class NotionStore:
         fingerprint: str,
         task_id: str,
         payload_summary: str = "",
-        window_seconds: int = 600,
+        window_seconds: int = 3600,
     ) -> Tuple[bool, Optional[str], Optional[str]]:
-        """Stage 1 Ingestion: Validates and persists an ingestion fingerprint to block duplicates."""
+        """Stage 1 Ingestion: Validates and persists an ingestion fingerprint to block duplicates within 1-hour window."""
         now = time.time()
         cutoff = now - window_seconds
         with self._get_connection() as conn:
@@ -600,7 +637,10 @@ class NotionStore:
                 SET title = ?, details = ?, priority = ?, category = ?, status = ?,
                     risk_level = ?, confidence_score = ?, reasoning_trace = ?,
                     draft_summary = ?, draft_email_html = ?, draft_teams_text = ?,
-                    source = ?, version = ?, nonce = ?, budget = ?, updated_at = ?, archived = ?
+                    proposed_ai_draft = ?, edited_draft = ?, ai_reasoning_ledger = ?,
+                    ingestion_fingerprint = ?, dlq_error_trace = ?, dlq_reason = ?,
+                    audio_file = ?, comment_thread = ?, source = ?, version = ?,
+                    nonce = ?, budget = ?, updated_at = ?, archived = ?
                 WHERE id = ?
             """, (
                 final_data.get("title"),
@@ -614,6 +654,14 @@ class NotionStore:
                 final_data.get("draft_summary"),
                 final_data.get("draft_email_html"),
                 final_data.get("draft_teams_text"),
+                final_data.get("proposed_ai_draft"),
+                final_data.get("edited_draft"),
+                final_data.get("ai_reasoning_ledger", ""),
+                final_data.get("ingestion_fingerprint"),
+                final_data.get("dlq_error_trace"),
+                final_data.get("dlq_reason"),
+                final_data.get("audio_file"),
+                final_data.get("comment_thread"),
                 final_data.get("source"),
                 final_data.get("version"),
                 final_data.get("nonce"),

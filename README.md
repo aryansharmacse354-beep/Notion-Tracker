@@ -3,162 +3,208 @@
 <img src="assets/logo_banner.gif" width="100%" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);" alt="Notion Tracker Enterprise Platform Banner" />
 
 # 🛡️ Notion Tracker — Enterprise Zero-Trust HITL Platform
-### High-Availability Orchestration, Cognitive AI Pre-Audits & Non-Repudiation Audit Ledger
+### High-Availability Orchestration, Multi-Modal AI Agents, Draft Staging & Non-Repudiation Audit Ledger
 
-[![Tests](https://img.shields.io/badge/Tests-11%2F11%20Passing%20(100%25)-brightgreen.svg)]()
-[![Audit Ledger](https://img.shields.io/badge/SHA--256%20Ledger-129%20Records%20Verified%20%5BOK%5D-blue.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-35%2F35%20Passing%20(100%25)-brightgreen.svg)]()
+[![Audit Ledger](https://img.shields.io/badge/SHA--256%20Ledger-Cryptographically%20Verified%20%5BOK%5D-blue.svg)]()
 [![Rate Limit](https://img.shields.io/badge/Rate%20Limit-Token--Bucket%20%E2%89%A4%202%20writes%2Fs-orange.svg)]()
 [![Concurrency](https://img.shields.io/badge/OCC-3--Way%20Merge%20Active-purple.svg)]()
-[![Localization](https://img.shields.io/badge/i18n-6%20Global%20Languages-cyan.svg)]()
+[![Deduplication](https://img.shields.io/badge/Deduplication-1--Hour%20Sliding%20Window-success.svg)]()
 [![Turn-Off Test](https://img.shields.io/badge/Turn--Off%20Test-100%25%20Compliant-emerald.svg)]()
 
-[📊 Download MNC Pitch Presentation (.pptx)](notion_tracker_mnc_pitch.pptx) • [🚀 Quickstart](#-quickstart-guide) • [🏗️ Architecture](#-system-architecture) • [🧪 Test Verification](#-verification--testing)
+[📊 Download Pitch Deck (.pptx)](notion_tracker_mnc_pitch.pptx) • [🚀 Quickstart](#-quickstart--installation) • [🏗️ Architecture & 5 Stages](#-the-5-stage-enterprise-automation-loop) • [🖥️ 3 UI Layers](#-the-3-unified-ui-layers) • [🧪 Test Verification](#-test-suite--verification) • [🎤 5-Minute Pitch Script](#-5-minute-live-pitch-presentation-script)
 
 </div>
 
 ---
 
-## 🌟 The Winning Notion Pivot: Core Capabilities
+## 🌟 Executive Overview & Platform Vision
 
-**Notion Tracker** transforms Notion into a hardened, high-availability, industrial command center for multi-national corporations. It replaces fragile custom JavaScript dashboards with native, resilient Notion database grids.
+**Notion Tracker** transforms Notion into a hardened, industrial-grade operational command center for mission-critical enterprise workflows. It eliminates fragile custom JavaScript dashboards by turning native Notion database grids into a resilient, multi-modal human-in-the-loop (HITL) interface backed by:
+
+1. **Deterministic Ingestion Deduplication**: 1-hour cryptographic sliding windows block duplicate submissions.
+2. **Cognitive AI Reasoning Ledger**: Natural language justifications written directly to Notion properties explaining *why* decisions were made.
+3. **Draft & Diff Staging**: AI pre-compiles outbound dispatches into editable Notion text blocks; human edits override machine outputs.
+4. **Dead-Letter Queue (DLQ) View**: Corrupt or failing payloads are safely isolated in a dedicated gallery view with diagnostic tracebacks ("The Turn-Off Test").
+5. **Multi-Modal AI Agents**: Gemini 1.5 Flash voice command parsing and `@AI` natural language comment bot with Optimistic Concurrency Control (OCC).
 
 ```mermaid
 graph TD
-    A[Messy External Webhooks] -->|HMAC-SHA256 & Nonce| B(FastAPI Gateway)
-    B -->|Token Bucket ≤ 2/s| C(AIAuditEngine Cognitive Pre-Audit)
-    C -->|Dynamic Typesetting| D[Notion Operations Command Center]
-    D -->|Drag & Drop Views| E1[Tasks Kanban Board]
-    D -->|Drag & Drop Views| E2[Gamified Operator Leaderboard]
-    D -->|Drag & Drop Views| E3[Real-Time Run Log Ledger]
-    D -->|Drag & Drop Views| E4[System Health Heartbeats]
-    D -->|Drag & Drop Views| E5[Pipeline Templates Matrix]
-    E1 -->|Human HITL Approval| F{Biometric / OTP Gate}
-    F -->|Verified| G[WorkflowEngine Dynamic Steps]
+    A[External Payloads / Webhooks / Audio] -->|HMAC-SHA256 & 1-Hr SHA-256 Hash| B(Stage 1: Ingestion Gateway)
+    B -->|Token Bucket Rate Limiter| C(Stage 2: AIAuditEngine & Reasoning Ledger)
+    C -->|Dynamic Typesetting| D[Stage 3: Notion Operations Command Center]
+    D -->|Human Staging & Edits| E[Draft & Diff Staging Box]
+    E -->|Biometric & OTP Gate| F{Zero-Trust Gatekeeper}
+    F -->|Approved| G(Stage 4: Outbound Dispatcher)
     G -->|Dispatches| H1[Microsoft Teams Adaptive Cards]
     G -->|Dispatches| H2[SendGrid Transactional Emails]
-    G -->|Cryptographic Seal| H3[Immutable SHA-256 Non-Repudiation Ledger]
+    G -->|Signed Seal| H3[Stage 5: SHA-256 Non-Repudiation Audit Ledger]
+    B -.->|Malformed / Crash| DLQ[Stage 5: Dead-Letter Queue Gallery]
 ```
 
 ---
 
-## 💎 Enterprise Feature Pillars
+## 🖥️ The 3 Unified UI Layers
 
-### 1. 🎛️ Centralized Operations Command Center (Drag-and-Drop Grid)
-* **Customizable Multi-Column Layout**: Managers can position the **Tasks Kanban Board**, **Gamified Operator Leaderboard**, **Real-Time Run Log**, and **System Health** side-by-side natively inside Notion.
-* **100% Passes "The Turn-Off Test"**: If Python background servers are powered down, the non-technical operator's customized dashboard, Kanban columns, and formulas remain **100% visual, structured, and editable inside Notion**.
-
-### 2. ⚡ Visual Workflow Builder: Pipeline Templates Database
-* **No-Code Visual Workflow Matrix**: Operators define dynamic automation pipelines as database rows inside Notion.
-* **Multi-Select Execution Steps**:
-  1. `1. HMAC Nonce Verify 🛡️`
-  2. `2. Cognitive AI Pre-Audit 🧠`
-  3. `3. Biometric & OTP Gate 🔐`
-  4. `4. Teams Adaptive Card 💬`
-  5. `5. SendGrid Email 📧`
-  6. `6. SHA-256 Signature Seal 📊`
-* **Dynamic Execution Engine (`workflow_engine.py`)**: The daemon polls configured templates and executes matching pipelines dynamically.
-
-### 3. 🏆 Gamified Operator Profiles & Streak Flames
-* **Notion-Native Formulas**:
-  * **Fire Indicator**: `if(prop("Current Streak") > 0, "🔥 " + format(prop("Current Streak")) + " Days", "💤 Inactive")`
-  * **Level Progression**: `"Level " + format(floor(prop("Tasks Completed") / 10) + 1)`
-* **Dynamic Badges**: Automatically unlocks `First Review 🏆`, `Speed Auditor ⚡`, `7-Day Streak 🔥`, `Zero-Error Champion 🛡️`, and `100 Tasks Certified 👑`.
-
-### 4. 🌐 Multilingual Typesetting & Zero-Cost Accessibility
-* **6 Global Languages**: English (`en`), Spanish (`es`), German (`de`), Japanese (`ja`), Hindi (`hi`), and French (`fr`).
-* **Inherited WCAG Standards**: Inherits Notion's enterprise accessibility out-of-the-box: native dark/light mode, ARIA screen-reader optimizations, keyboard shortcuts, and responsive layouts.
-
-### 5. 🛡️ Industrial Zero-Trust Resiliency Guards
-* **Token-Bucket Rate Limiter**: Strictly enforces safe write limits ($\le 2$ writes/sec) with automated token replenishment.
-* **Optimistic Concurrency Control (OCC)**: Version counters with 3-Way Merge conflict resolution prevent state overwrites during concurrent approvals.
-* **Biometric Mesh & SMS OTP Gate**: Physical operator biometric verification required for `CRITICAL` and `HIGH` risk tasks.
-* **Cryptographic SHA-256 Ledger**: Chained non-repudiation audit ledger verified from genesis hash.
+| UI Layer | URL / Interface | Key Target Audience | Core Capabilities |
+| :--- | :--- | :--- | :--- |
+| **Layer 1: Native Notion Workspace** | Notion Desktop / Web | Non-Technical Managers & Executives | Drag-and-Drop Operations Grid, Tasks Kanban, DLQ Gallery View, Operator Leaderboard, 100% passes **The Turn-Off Test**. |
+| **Layer 2: Streamlit HITL Portal** | `http://localhost:8501` | Operations Officers & Auditors | Biometric Facial Mesh HUD, SMS OTP Gate, OCC 3-Way Merge Conflict Simulator, PDF/Excel Reporting, Day/Night Theme. |
+| **Layer 3: Single-Page Web App** | `http://localhost:8000/` | SREs, Developers & Integrators | 100vh locked layout, Live Webhook Simulator, Interactive `@AI` Comment & Voice Agent Console, Real-Time SHA-256 Ledger. |
 
 ---
 
-## 🛠️ Quickstart Guide
+## 🔄 The 5-Stage Enterprise Automation Loop
 
-### 1. Installation & Environment Setup
+### Stage 1: Multi-Modal Ingestion & Deduplication Fingerprinting
+- **1-Hour Sliding Window (`3600s`)**: Normalizes payload fields (`lowercase_email + task_date + title + details + source`) and computes a 64-character SHA-256 fingerprint.
+- **Quota & Lock Protection**: Duplicate submissions within 1 hour are rejected at the edge before consuming Notion API write quotas.
+
+### Stage 2: AI Decision Engine & AI Reasoning Ledger
+- **Explainable AI**: Generates a concise 1–2 sentence natural language explanation justifying risk scores (e.g. `Classified as HIGH risk (91% confidence) under 'Infrastructure' based on access modification scope. Staged pre-compiled dispatch draft for review.`).
+- **Dedicated Notion Column**: Programmatically updates the `"AI Reasoning Ledger"` rich-text property and page body callout block.
+
+### Stage 3: Advanced Human-in-the-Loop (Draft & Diff Staging)
+- **Draft Staging**: The AI pre-compiles proposed notifications to `Proposed AI Draft`.
+- **Human Priority Override**: Operators tweak wording in Notion or the dashboard. The system stores changes in `edited_draft` and dispatches the human-refined text upon approval.
+
+### Stage 4: Outbound Action Engine & Multi-Select Batch
+- **Token-Bucket Rate Limiter**: Enforces $\le 2$ writes/sec ($10.0$ capacity) to prevent Notion 429 rate limit exceptions.
+- **Multi-Select Batch Execution**: Non-technical users highlight multiple database rows in Notion, right-click, and set `Status = "Approved"`. The daemon dispatches all selected tasks concurrently across worker threads.
+
+### Stage 5: Industrial Observability, DLQ & Tamper-Proof Audit Ledger
+- **Dead-Letter Queue (DLQ)**: Quarantines unprocessable payloads into `DLQ: Needs Technical Review` with high-visibility red diagnostic traceback blocks.
+- **SHA-256 Audit Chain**: Every transaction generates a tamper-evident cryptographic block hashed to the genesis seal.
+
+---
+
+## 🎙️ Multi-Modal Intelligence Engines
+
+### 1. Notion Natural Language `@AI` Comment Agent
+- **Inline Discussion Polling**: In Notion, operators comment `@AI update budget to $4,500` or `@AI re-assess risk`.
+- **OCC 3-Way Merge**: The agent updates task attributes without clobbering concurrent human edits.
+
+### 2. Gemini 1.5 Flash Audio-Modal Voice Engine
+- **Voice Memo Transcription**: Parses attached `.wav`, `.mp3`, and `.m4a` audio files directly using Gemini Flash audio models.
+- **Structured State Transitions**: Automatically extracts budget figures, risk re-evaluations, and approval directives.
+
+---
+
+## 🚀 Quickstart & Installation
+
+### 1. Clone & Setup Environment
 ```powershell
 # Clone the repository
-git clone https://github.com/YourOrg/notion-tracker.git
+git clone https://github.com/YourOrg/Notion-Tracker.git
 cd "Notion Tracker"
 
-# Install dependencies
+# Install Python dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Database Provisioning
+### 2. Configure Environment Variables
+```powershell
+# Copy template and fill Notion API / Gemini API keys
+cp .env.example .env
+```
+
+### 3. Provision Notion Database Workspace
 ```powershell
 # Provisions Tasks, Run Logs, User Profiles, and Pipeline Templates
 python create_databases.py
 ```
 
-### 3. Launching Services
+### 4. Launch All Services Concurrently
 ```powershell
-# 1. Start the Streamlit Administrative Control Portal
-streamlit run dashboard.py
-
-# 2. Start the 60-Minute Persistent Background Automation Daemon
-python main.py
-
-# 3. Start the Ingestion Gateway
-uvicorn webhook_gateway:app --host 0.0.0.0 --port 8000
+# Starts FastAPI Gateway (8000), Streamlit Dashboard (8501), and Worker Daemon
+python run_all.py
 ```
 
 ---
 
-## 🧪 Verification & Testing
+## 🧪 Test Suite & Verification
 
-### Run Comprehensive Unit Test Suite (11/11 Passing)
+The test suite covers **35 comprehensive unit tests (100% passing)** across all enterprise layers:
+
 ```powershell
-python -m unittest test_tracker.py -v
+# Run the complete test suite
+python -m unittest test_tracker.py test_notion_tracker_suite.py -v
 ```
-```text
-test_ai_pre_audit_and_typesetting ... ok
-test_multilingual_notion_typesetting_and_localization ... ok
-test_notion_run_log_typesetting_and_dual_toggles ... ok
-test_pipeline_templates_and_workflow_execution ... ok
-test_system_health_heartbeat_and_turn_off_test ... ok
-test_user_profiles_gamification_and_streaks ... ok
-test_voice_memo_and_comment_agent_budget ... ok
-test_hmac_and_nonce_guards ... ok
-test_occ_three_way_merge ... ok
-test_daemon_batch_query_and_60m_config ... ok
-test_rate_limiter_behavior ... ok
 
+```text
 ----------------------------------------------------------------------
-Ran 11 tests in 1.319s
+Ran 35 tests in 14.685s
 
-OK (11/11 tests passed)
+OK (35/35 tests passing)
 ```
 
-### Run Cryptographic Ledger Integrity Check
+### Test Coverage Highlights:
+- `test_deduplication_fingerprinting_1hr_window` &rarr; Validates 1-hour deduplication sliding window.
+- `test_ai_reasoning_ledger_property` &rarr; Verifies 1-2 sentence AI justification written to Notion column.
+- `test_draft_and_diff_staging` &rarr; Validates human operator overrides over AI drafts.
+- `test_dead_letter_queue_quarantine` &rarr; Verifies DLQ isolation and red traceback block generation.
+- `test_occ_three_way_merge` &rarr; Verifies 3-way merge conflict resolution under concurrent writes.
+- `test_voice_memo_and_comment_agent_budget` &rarr; Verifies `@AI` comments and Gemini voice commands.
+
+### Verify Audit Ledger & Run OTP Challenge:
 ```powershell
+# 1. Audit Cryptographic Signatures
 python verify_signatures.py
-```
-```text
-=================================================================
- [AUDIT] NOTION TRACKER INDUSTRIAL AUDIT LEDGER INTEGRITY CHECK
-=================================================================
 
-Audit Status:            [OK] SECURE
-Recalculated Records:    129
-Mismatches Detected:     0
-Signature Chain Valid:   VALID
+# 2. Test Tamper Detection
+python verify_signatures.py --tamper-test
 
-[+] Verification Result: All deterministic SHA-256 signatures are cryptographically sound.
+# 3. Interactive Phone OTP Challenge (IN +91)
+python verify_signatures.py --otp-challenge
 ```
 
 ---
 
-## 📊 Presentation Deck
+## 🎤 5-Minute Live Pitch Presentation Script
 
-The complete MNC pitch deck is available at:
-* **[`notion_tracker_mnc_pitch.pptx`](notion_tracker_mnc_pitch.pptx)** — 16:9 Widescreen Presentation Deck with embedded dark-tech branding, architectural breakdowns, and competition verification metrics.
+*Custom-tailored for Aryan Sharma (Lead Architect) & Atul Yadav (QA & Security Lead)*
+
+---
+
+### **[Minute 0:00 – 1:00] Slide 1–2: The Problem & The Notion Pivot**
+> **Aryan (Lead Architect):**
+> *"Judges, enterprise operations today suffer from dashboard fatigue. When companies build custom internal portals, they break, require constant engineering maintenance, and fail 'The Turn-Off Test'—if the server goes down, operations freeze.*
+> *Our solution is **Notion Tracker**: we turn Notion itself into a hardened, zero-trust operational command center that non-technical managers already know and love."*
+
+---
+
+### **[Minute 1:00 – 2:00] Slide 3–4: Ingestion Deduplication & AI Reasoning Ledger**
+> **Aryan (Lead Architect):**
+> *"Let’s look at Stage 1 and Stage 2 in action.*
+> *In Stage 1, our **Deduplication Fingerprinter** computes deterministic SHA-256 hashes with a 1-hour sliding window, ensuring double-clicked webhooks never waste Notion API quotas.*
+> *In Stage 2, our **AI Pre-Audit Engine** doesn't just assign a risk score—it writes a concise 1-to-2 sentence justification directly into the new **AI Reasoning Ledger** Notion property so non-technical managers understand the machine's exact thought process."*
+
+---
+
+### **[Minute 2:00 – 3:00] Slide 5–6: Draft & Diff Staging & Multi-Modal Agents**
+> **Aryan (Lead Architect):**
+> *"In Stage 3, we introduce **Draft & Diff Staging**. The AI pre-generates the outbound communication, but the human operator can tweak the wording directly inside Notion. When approved, our engine dispatches the human's refined draft, not the machine output.*
+> *Furthermore, operators can simply type `@AI update budget to $4,500` or drop a voice memo `.wav` file into the page. Our Gemini 1.5 Flash agent parses the audio and executes the update with OCC 3-way merge protection."*
+
+---
+
+### **[Minute 3:00 – 4:00] Slide 7–8: Zero-Trust Security, OTP Gateway & DLQ**
+> **Atul (QA & Security Lead):**
+> *"On the security front, every high-risk execution requires physical biometric and 6-digit SMS OTP verification linked to operator profiles (`IN +91`).*
+> *Under Stage 5, if a corrupt payload arrives, our system never crashes—it routes the item to our dedicated **Dead-Letter Queue (DLQ)** gallery view with high-visibility red traceback blocks.*
+> *Every single transaction is deterministically sealed into our immutable **SHA-256 Audit Ledger**, verifiable with zero dependencies."*
+
+---
+
+### **[Minute 4:00 – 5:00] Slide 9–10: Live Proof & The Turn-Off Test**
+> **Aryan & Atul:**
+> *"To prove our engineering rigor, our test suite contains **35 deterministic unit tests passing at 100%**, validating database collisions, spoofing defenses, and rate limiting.*
+> *And if we turn off every Python background server right now? The Notion workspace remains 100% visual, structured, and readable.*
+> *Thank you—we are now open for questions!"*
 
 ---
 
 <div align="center">
-  <sub>Built by <b>Team AI Experts</b> | Aryan Sharma (Lead Architect) & Atul Yadav (QA & Security)</sub>
+  <sub>Developed with pride by <b>Team AI Experts</b> • Aryan Sharma & Atul Yadav</sub>
 </div>
+
