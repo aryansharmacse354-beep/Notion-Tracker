@@ -34,8 +34,9 @@ import streamlit as st
 from streamlit.runtime import exists as runtime_exists
 if not runtime_exists():
     from streamlit.web import cli as stcli
-    sys.argv = ["streamlit", "run", sys.argv[0], "--server.address", "127.0.0.1", "--server.port", "8501", "--server.headless", "false"]
+    sys.argv = ["streamlit", "run", sys.argv[0], "--server.address", "0.0.0.0", "--server.port", "8501", "--server.headless", "false"]
     sys.exit(stcli.main())
+
 
 from PIL import Image, ImageDraw, ImageFont
 

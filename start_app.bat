@@ -4,18 +4,22 @@ cls
 echo ====================================================================
 echo  🚀 NOTION TRACKER ENTERPRISE PLATFORM (Zero-Trust HITL)
 echo ====================================================================
-echo [*] Initializing services in user session...
+echo [*] Initializing services...
 echo.
 
-start "Notion Tracker - Streamlit Control Portal" python -m streamlit run dashboard.py --server.address 127.0.0.1 --server.port 8501 --server.headless false --browser.gatherUsageStats false
-start "Notion Tracker - FastAPI Gateway" python -m uvicorn webhook_gateway:app --host 127.0.0.1 --port 8000
+start "Notion Tracker - Streamlit Portal" python -m streamlit run dashboard.py --server.port 8501 --server.headless false
+start "Notion Tracker - FastAPI Gateway" python -m uvicorn webhook_gateway:app --host 0.0.0.0 --port 8000
 start "Notion Tracker - Worker Daemon" python main.py
 
-echo [OK] All 3 microservices have been launched in your session!
+timeout /t 2 /nobreak >nul
+start http://localhost:8501
+
+echo [OK] All services launched!
 echo.
-echo  • Streamlit Control Portal: http://127.0.0.1:8501
-echo  • FastAPI Webhook Gateway:   http://127.0.0.1:8000
-echo  • Swagger API Docs:          http://127.0.0.1:8000/docs
+echo  • Streamlit Control Portal: http://localhost:8501
+echo  • FastAPI Webhook Gateway:   http://localhost:8000
+echo  • Swagger API Docs:          http://localhost:8000/docs
 echo.
-echo Press any key to exit this launcher window (services keep running in background).
+echo Press any key to close this launcher (services keep running in background).
 pause >nul
+
