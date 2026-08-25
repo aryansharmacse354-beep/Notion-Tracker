@@ -13,13 +13,13 @@ start "Notion Tracker - Worker Daemon" python main.py
 
 timeout /t 2 /nobreak >nul
 start http://localhost:8501
+start http://localhost:8000
 
 echo [OK] All services launched!
 echo.
-echo  • Streamlit Control Portal: http://localhost:8501
-echo  • FastAPI Webhook Gateway:   http://localhost:8000
-echo  • Swagger API Docs:          http://localhost:8000/docs
+echo  • Streamlit Control Portal:    http://localhost:8501
+echo  • Single-Page Web App:         http://localhost:8000
+echo  • Swagger API Documentation:   http://localhost:8000/docs
 echo.
 echo Press any key to close this launcher (services keep running in background).
 pause >nul
-
