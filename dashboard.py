@@ -124,14 +124,14 @@ cur_lang = st.session_state.lang
 # ==============================================================================
 # ENTERPRISE DESIGN SYSTEM & UI STYLES
 # ==============================================================================
-card_bg = "#111827"
-card_border = "#1f2937"
-text_main = "#f8fafc"
-text_muted = "#94a3b8"
-metric_bg = "#0f172a"
-hero_bg = "linear-gradient(135deg, #090d16 0%, #1e1b4b 60%, #312e81 100%)"
+card_bg = "#1e293b"
+card_border = "#334155"
+text_main = "#ffffff"
+text_muted = "#cbd5e1"
+metric_bg = "#1e293b"
+hero_bg = "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)"
 fact_bg = "#1e293b"
-fact_border = "#334155"
+fact_border = "#475569"
 
 st.markdown(f"""
 <style>
@@ -143,7 +143,7 @@ st.markdown(f"""
     }}
     
     .stApp {{
-        background: radial-gradient(ellipse at top, #0f172a 0%, #030712 100%);
+        background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
         position: relative;
     }}
     
@@ -155,6 +155,7 @@ st.markdown(f"""
         position: relative;
         z-index: 1;
     }}
+
     
     /* Header Gradient & Hero Styling */
     .hero-container {{
