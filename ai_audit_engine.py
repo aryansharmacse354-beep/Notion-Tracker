@@ -71,25 +71,36 @@ class AIAuditEngine:
     ]
 
     @classmethod
-    def analyze_task(cls, title: str, details: str, requested_priority: str = "normal") -> TaskPreAuditResult:
+    def analyze_task(cls, title: Any = "", details: str = "", requested_priority: str = "normal", **kwargs) -> TaskPreAuditResult:
         """Evaluates an incoming task payload and produces structured pre-audit metadata.
 
         Args:
-            title: Title of the task.
+            title: Title of the task (or a task dictionary).
             details: Unstructured details or instructions.
             requested_priority: Raw priority requested by external webhook.
 
         Returns:
             TaskPreAuditResult containing risk score, CoT trace, and pre-compiled drafts.
         """
-        combined_text = f"{title} {details}".lower()
+        if isinstance(title, dict):
+            task_dict = title
+            title_str = str(task_dict.get("title") or task_dict.get("task_title") or "")
+            details_str = str(task_dict.get("details") or task_dict.get("action") or "")
+            requested_priority = str(task_dict.get("priority") or requested_priority)
+        else:
+            title_str = str(title or "")
+            details_str = str(details or kwargs.get("details", ""))
+            requested_priority = str(requested_priority or kwargs.get("requested_priority", "normal"))
+
+        combined_text = f"{title_str} {details_str}".lower()
         reasoning_trace: List[str] = []
         security_flags: List[str] = []
 
         # Step 1: Ingestion & Text Normalization
         reasoning_trace.append("[Step 1] Ingested raw payload and verified HMAC integrity.")
         token_count = len(combined_text.split())
-        reasoning_trace.append(f"[Step 2] Tokenized input ({token_count} words). Extracted title: '{title}'.")
+        reasoning_trace.append(f"[Step 2] Tokenized input ({token_count} words). Extracted title: '{title_str}'.")
+
 
         # Step 2: Risk Scoring & Pattern Matching
         is_critical = any(re.search(pat, combined_text, re.IGNORECASE) for pat in cls.CRITICAL_PATTERNS)
@@ -131,21 +142,22 @@ class AIAuditEngine:
         reasoning_trace.append(f"[Step 4] Domain Classification mapped to category: '{category}'.")
 
         # Step 5: Draft Outbound Notification Compilation
-        draft_summary = f"[{category}] {title} — Evaluated as {risk_level} Risk (Confidence: {int(confidence_score * 100)}%)."
+        draft_summary = f"[{category}] {title_str} — Evaluated as {risk_level} Risk (Confidence: {int(confidence_score * 100)}%)."
         reasoning_trace.append("[Step 5] Synthesized preliminary notification prose and formatted Adaptive Card schema.")
 
-        draft_teams_text = f"**{title}**\n\n*Category:* {category} | *Priority:* {suggested_priority.upper()}\n*Pre-Audit Risk:* **{risk_level}**\n\n{details}"
+        draft_teams_text = f"**{title_str}**\n\n*Category:* {category} | *Priority:* {suggested_priority.upper()}\n*Pre-Audit Risk:* **{risk_level}**\n\n{details_str}"
         draft_email_html = f"""<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-  <h2 style="color: #1a73e8; margin-top: 0;">Task Notification: {title}</h2>
+  <h2 style="color: #1a73e8; margin-top: 0;">Task Notification: {title_str}</h2>
   <div style="background-color: #f8f9fa; padding: 12px; border-left: 4px solid {'#d93025' if risk_level in ('HIGH', 'CRITICAL') else '#1e8e3e'}; margin: 15px 0;">
     <strong>Pre-Audit Risk Evaluation:</strong> <span style="font-weight: bold; color: {'#d93025' if risk_level in ('HIGH', 'CRITICAL') else '#1e8e3e'};">{risk_level}</span> (Confidence: {int(confidence_score * 100)}%)<br>
     <strong>Category:</strong> {category} | <strong>Priority:</strong> {suggested_priority.upper()}
   </div>
   <p><strong>Task Details:</strong></p>
-  <p style="color: #3c4043; line-height: 1.6;">{details}</p>
+  <p style="color: #3c4043; line-height: 1.6;">{details_str}</p>
   <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
   <small style="color: #70757a;">Dispatched via Notion Tracker Zero-Trust HITL Pipeline. Deterministically signed and audited.</small>
 </div>"""
+
 
         return TaskPreAuditResult(
             risk_level=risk_level,
