@@ -124,215 +124,231 @@ cur_lang = st.session_state.lang
 
 
 # ==============================================================================
-# ENTERPRISE DESIGN SYSTEM & UI STYLES
+# NOTION-AUTHENTIC DESIGN SYSTEM (OBSIDIAN DARK & DAYLIGHT COMPLIANT)
 # ==============================================================================
-card_bg = "#1e293b"
-card_border = "#334155"
-text_main = "#ffffff"
-text_muted = "#cbd5e1"
-metric_bg = "#1e293b"
-hero_bg = "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)"
-fact_bg = "#1e293b"
-fact_border = "#475569"
+bg_app = "#191919"
+bg_card = "#202020"
+bg_card_sub = "#262626"
+card_border = "rgba(255, 255, 255, 0.09)"
+card_border_hover = "rgba(255, 255, 255, 0.18)"
+text_main = "#ededeb"
+text_muted = "#9b9a97"
+text_subtle = "#6f6e69"
+accent_blue = "#2383e2"
 
 st.markdown(f"""
 <style>
+    /* 1. Global Page Background & Notion Typography */
     html, body, [class*="css"], .stApp {{
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        color: {text_main};
-        background: #0f172a !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif !important;
+        color: {text_main} !important;
+        background: {bg_app} !important;
     }}
     
-    /* Main Layout */
-    .block-container {{
-        padding-top: 1.5rem;
-        padding-bottom: 2.5rem;
-        max-width: 1420px;
-        position: relative;
+    /* 2. Notion Sidebar Styling */
+    [data-testid="stSidebar"] {{
+        background-color: #202020 !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
     }}
-
-
-    
-    /* Header Gradient & Hero Styling */
-    .hero-container {{
-        background: {hero_bg};
-        border-radius: 16px;
-        padding: 24px 30px;
-        margin-bottom: 24px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.35);
-        color: #ffffff;
-    }}
-    .hero-title {{
-        font-size: 2.0rem;
-        font-weight: 800;
-        letter-spacing: -0.025em;
-        margin: 0 0 4px 0;
-        background: linear-gradient(90deg, #ffffff 0%, #e2e8f0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }}
-    .hero-subtitle {{
-        font-size: 0.95rem;
-        color: #cbd5e1;
-        margin: 0;
-        font-weight: 400;
-    }}
-    .hero-badge {{
-        display: inline-block;
-        background: rgba(99, 102, 241, 0.25);
-        color: #c7d2fe;
-        border: 1px solid rgba(129, 140, 248, 0.4);
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-    }}
-    
-    /* Cards */
-    .pro-card {{
-        background: {card_bg};
-        border-radius: 12px;
-        border: 1px solid {card_border};
-        padding: 20px;
-        margin-bottom: 16px;
-        box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.06);
-    }}
-    
-    /* Metric Cards */
-    .metric-box {{
-        background: {metric_bg};
-        border: 1px solid {card_border};
-        border-radius: 12px;
-        padding: 18px 20px;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-    }}
-    .metric-box::before {{
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        background: #6366f1;
-    }}
-    .metric-box-critical::before {{ background: #ef4444; }}
-    .metric-box-success::before {{ background: #10b981; }}
-    .metric-box-warning::before {{ background: #f59e0b; }}
-    .metric-value {{
-        font-size: 1.75rem;
-        font-weight: 800;
-        color: {text_main};
-        margin: 4px 0 0 0;
-        letter-spacing: -0.02em;
-    }}
-    .metric-label {{
-        font-size: 0.78rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {{
         color: {text_muted};
-        margin: 0;
     }}
     
-    /* Risk Banners */
-    .risk-banner {{
-        border-radius: 10px;
-        padding: 14px 18px;
-        margin-bottom: 16px;
+    /* 3. Main Container */
+    .block-container {{
+        padding-top: 1.2rem;
+        padding-bottom: 2.5rem;
+        max-width: 1400px;
+    }}
+
+    /* 4. Notion Page Header Card */
+    .notion-header-card {{
+        background: {bg_card};
+        border-radius: 8px;
+        padding: 20px 24px;
+        margin-bottom: 20px;
+        border: 1px solid {card_border};
+        box-shadow: rgba(15, 15, 15, 0.1) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 2px 4px;
+    }}
+    .notion-breadcrumbs {{
+        font-size: 0.80rem;
+        color: {text_muted};
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: 6px;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }}
+    .notion-page-title {{
+        font-size: 1.85rem;
         font-weight: 700;
+        letter-spacing: -0.02em;
+        color: {text_main};
+        margin: 0 0 4px 0;
     }}
-    .risk-banner-critical {{
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(185, 28, 28, 0.25) 100%);
-        border: 1px solid #ef4444;
-        color: #f87171;
+    .notion-page-subtitle {{
+        font-size: 0.88rem;
+        color: {text_muted};
+        margin: 0;
+        line-height: 1.4;
     }}
-    .risk-banner-high {{
-        background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(180, 83, 9, 0.25) 100%);
-        border: 1px solid #f59e0b;
-        color: #fbbf24;
+
+    /* 5. Authentic Notion Multi-Select Badges & Tag Pills */
+    .notion-tag {{
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        line-height: 1.3;
     }}
-    .risk-banner-medium {{
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(4, 120, 87, 0.25) 100%);
-        border: 1px solid #10b981;
-        color: #34d399;
+    .tag-blue {{ background: rgba(37, 99, 235, 0.18); color: #93c5fd; border: 1px solid rgba(37, 99, 235, 0.35); }}
+    .tag-green {{ background: rgba(22, 163, 74, 0.18); color: #86efac; border: 1px solid rgba(22, 163, 74, 0.35); }}
+    .tag-yellow {{ background: rgba(202, 138, 4, 0.18); color: #fde047; border: 1px solid rgba(202, 138, 4, 0.35); }}
+    .tag-red {{ background: rgba(220, 38, 38, 0.18); color: #fca5a5; border: 1px solid rgba(220, 38, 38, 0.35); }}
+    .tag-orange {{ background: rgba(234, 88, 12, 0.18); color: #fdba74; border: 1px solid rgba(234, 88, 12, 0.35); }}
+    .tag-purple {{ background: rgba(147, 51, 234, 0.18); color: #d8b4fe; border: 1px solid rgba(147, 51, 234, 0.35); }}
+    .tag-gray {{ background: rgba(100, 116, 139, 0.18); color: #cbd5e1; border: 1px solid rgba(100, 116, 139, 0.35); }}
+
+    /* 6. Notion Callout Block */
+    .notion-callout {{
+        background: rgba(255, 255, 255, 0.055);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
     }}
-    .risk-banner-low {{
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(79, 70, 229, 0.2) 100%);
-        border: 1px solid #6366f1;
-        color: #a5b4fc;
-    }}
-    
-    /* Operator Card in Sidebar */
-    .operator-profile-card {{
-        background: {metric_bg};
+    .notion-callout-blue {{ background: rgba(35, 131, 226, 0.12); border-color: rgba(35, 131, 226, 0.25); }}
+    .notion-callout-yellow {{ background: rgba(202, 138, 4, 0.12); border-color: rgba(202, 138, 4, 0.25); }}
+    .notion-callout-red {{ background: rgba(220, 38, 38, 0.12); border-color: rgba(220, 38, 38, 0.25); }}
+    .notion-callout-green {{ background: rgba(22, 163, 74, 0.12); border-color: rgba(22, 163, 74, 0.25); }}
+
+    /* 7. Notion Database Card / Panel */
+    .notion-card {{
+        background: {bg_card};
         border: 1px solid {card_border};
-        border-radius: 12px;
-        padding: 16px;
+        border-radius: 6px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+        transition: border-color 0.15s ease, background 0.15s ease;
+    }}
+    .notion-card:hover {{
+        border-color: {card_border_hover};
+    }}
+
+    /* 8. Operator Profile Card */
+    .operator-profile-card {{
+        background: {bg_card};
+        border: 1px solid {card_border};
+        border-radius: 8px;
+        padding: 14px;
         color: {text_main};
         margin-bottom: 16px;
     }}
     .operator-name {{
-        font-size: 1.05rem;
+        font-size: 1.0rem;
         font-weight: 700;
         color: {text_main};
         margin: 0;
     }}
     .operator-role {{
-        font-size: 0.8rem;
-        color: #818cf8;
-        font-weight: 600;
-        margin: 2px 0 8px 0;
+        font-size: 0.78rem;
+        color: #93c5fd;
+        font-weight: 500;
+        margin: 2px 0 6px 0;
     }}
     .operator-status-dot {{
         display: inline-block;
-        width: 8px;
-        height: 8px;
+        width: 7px;
+        height: 7px;
         border-radius: 50%;
-        background: #10b981;
+        background: #16a34a;
         margin-right: 6px;
-        box-shadow: 0 0 8px #10b981;
+        box-shadow: 0 0 6px #16a34a;
     }}
 
-    /* Facts Grid */
+    /* 9. Structured Facts Grid (Notion Properties) */
     .fact-item {{
-        background: {fact_bg};
-        border: 1px solid {fact_border};
-        border-radius: 8px;
-        padding: 10px 14px;
+        background: {bg_card_sub};
+        border: 1px solid {card_border};
+        border-radius: 6px;
+        padding: 10px 12px;
         margin-bottom: 8px;
-        font-size: 0.88rem;
-        color: {text_muted};
     }}
     .fact-title {{
         font-size: 0.72rem;
         text-transform: uppercase;
         color: {text_muted};
         font-weight: 700;
-        letter-spacing: 0.05em;
-        margin-bottom: 2px;
+        letter-spacing: 0.04em;
+        margin-bottom: 4px;
     }}
     .fact-content {{
-        font-size: 0.95rem;
-        font-weight: 700;
+        font-size: 0.92rem;
+        font-weight: 600;
         color: {text_main};
     }}
 
-    /* CoT Step Line */
+    /* 10. Chain-of-Thought / Quote Step Line */
     .cot-step {{
-        border-left: 2px solid #6366f1;
+        border-left: 2px solid {accent_blue};
         padding-left: 12px;
         margin-bottom: 8px;
-        font-size: 0.88rem;
+        font-size: 0.85rem;
         color: {text_muted};
+        line-height: 1.5;
+    }}
+
+    /* 11. Streamlit Widget Overrides */
+    .stButton > button {{
+        background: #262626 !important;
+        color: {text_main} !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border-radius: 5px !important;
+        font-weight: 500 !important;
+        font-size: 0.85rem !important;
+        transition: all 0.15s ease !important;
+    }}
+    .stButton > button:hover {{
+        background: rgba(255, 255, 255, 0.09) !important;
+        border-color: rgba(255, 255, 255, 0.22) !important;
+    }}
+    .stButton > button[kind="primary"] {{
+        background: #2383e2 !important;
+        border: none !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }}
+    .stButton > button[kind="primary"]:hover {{
+        background: #1d72c6 !important;
+    }}
+    div[data-baseweb="input"] > div, div[data-baseweb="select"] > div, div[data-baseweb="textarea"] > div {{
+        background-color: #262626 !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border-radius: 5px !important;
+        color: {text_main} !important;
+    }}
+    [data-testid="stExpander"] {{
+        background: #202020 !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 6px !important;
+    }}
+    [data-testid="stMetricValue"] {{
+        color: {text_main} !important;
+        font-weight: 700 !important;
+    }}
+    [data-testid="stMetricLabel"] {{
+        color: {text_muted} !important;
+        font-size: 0.76rem !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+    }}
+    hr {{
+        border-color: rgba(255, 255, 255, 0.08) !important;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -482,28 +498,40 @@ with st.sidebar:
 
 
 # ==============================================================================
-# TOP HERO BANNER
+# NOTION PAGE HEADER & BREADCRUMBS
 # ==============================================================================
-logo_hero_html = f'<img src="data:image/png;base64,{logo_b64}" style="width: 66px; height: 66px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.35); background: #ffffff; padding: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.35); flex-shrink: 0;" />' if logo_b64 else '<span style="font-size: 2.2rem;">🛡️</span>'
+logo_hero_html = f'<img src="data:image/png;base64,{logo_b64}" style="width: 52px; height: 52px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.12); background: #202020; padding: 3px; flex-shrink: 0;" />' if logo_b64 else '<span style="font-size: 2.2rem;">🛡️</span>'
 
 active_flame = current_user.get("streak_flame", "🔥 1 Day") if current_user else "🔥 Active"
+page_name = t(active_module_key, lang=cur_lang) if active_module_key in TRANSLATIONS.get("en", {}) else "Operations Command Center"
 
 st.markdown(f"""
-<div class="hero-container">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-        <div style="display: flex; align-items: center; gap: 18px;">
+<div class="notion-header-card">
+    <div class="notion-breadcrumbs">
+        <span>🏠 Workspace</span>
+        <span style="color: {text_subtle};">/</span>
+        <span>Notion Tracker</span>
+        <span style="color: {text_subtle};">/</span>
+        <span style="color: {text_main}; font-weight: 600;">{page_name}</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-top: 8px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
             {logo_hero_html}
             <div>
-                <div class="hero-badge">{t("hero_badge", lang=cur_lang)}</div>
-                <h1 class="hero-title">{t("hero_title", lang=cur_lang)}</h1>
-                <p class="hero-subtitle">{t("hero_subtitle", lang=cur_lang)}</p>
+                <div style="margin-bottom: 4px;">
+                    <span class="notion-tag tag-blue">{t("hero_badge", lang=cur_lang)}</span>
+                    <span class="notion-tag tag-green" style="margin-left: 4px;">● {t("pipeline_active", lang=cur_lang)}</span>
+                </div>
+                <h1 class="notion-page-title">{t("hero_title", lang=cur_lang)}</h1>
+                <p class="notion-page-subtitle">{t("hero_subtitle", lang=cur_lang)}</p>
             </div>
         </div>
-        <div style="text-align: right; background: rgba(255, 255, 255, 0.06); padding: 12px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12);">
-            <div style="font-size: 0.72rem; text-transform: uppercase; color: #94a3b8; font-weight: 700;">{t("active_operator", lang=cur_lang)}</div>
-            <div style="font-size: 1.05rem; font-weight: 700; color: #ffffff;">{st.session_state.active_user} <span style="font-size: 0.82rem; color: #f59e0b; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); padding: 2px 8px; border-radius: 10px; margin-left: 4px;">{active_flame}</span></div>
-            <div style="font-size: 0.75rem; color: #10b981; font-weight: 600; margin-top: 2px;">{t("pipeline_active", lang=cur_lang)}</div>
-            <a href="http://localhost:8000" target="_blank" style="display: inline-block; margin-top: 6px; font-size: 0.72rem; color: #c7d2fe; text-decoration: none; background: rgba(99,102,241,0.25); border: 1px solid #818cf8; padding: 2px 8px; border-radius: 6px; font-weight: 600;">⚡ Single-Page App (8000) ↗</a>
+        <div style="text-align: right; background: {bg_card_sub}; padding: 10px 14px; border-radius: 6px; border: 1px solid {card_border};">
+            <div style="font-size: 0.70rem; text-transform: uppercase; color: {text_muted}; font-weight: 700; letter-spacing: 0.04em;">{t("active_operator", lang=cur_lang)}</div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: {text_main}; margin-top: 2px;">
+                <span class="operator-status-dot"></span>{st.session_state.active_user} <span class="notion-tag tag-orange" style="font-size: 0.70rem; margin-left: 4px;">{active_flame}</span>
+            </div>
+            <a href="http://localhost:8000" target="_blank" style="display: inline-block; margin-top: 6px; font-size: 0.72rem; color: #93c5fd; text-decoration: none; background: rgba(37,99,235,0.15); border: 1px solid rgba(37,99,235,0.3); padding: 2px 8px; border-radius: 4px; font-weight: 500;">⚡ SPA Portal (8000) ↗</a>
         </div>
     </div>
 </div>
@@ -533,11 +561,14 @@ if active_module_key == "nav_command_center":
 
             st.markdown(f"**Ready for Review ({len(ready_t)})**")
             for t_item in ready_t[:3]:
-                r_color = "#ef4444" if t_item.get("risk_level") in ("CRITICAL", "HIGH") else "#10b981"
+                r_color = "#dc2626" if t_item.get("risk_level") in ("CRITICAL", "HIGH") else "#16a34a"
                 st.markdown(f"""
-                <div style="background: #1e293b; border-left: 3px solid {r_color}; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px;">
-                    <div style="font-size: 0.82rem; font-weight: 700; color: #f8fafc;">{t_item.get('title')}</div>
-                    <div style="font-size: 0.70rem; color: #94a3b8;">Risk: <b>{t_item.get('risk_level')}</b> | OCC: <code>v{t_item.get('version', 1)}</code></div>
+                <div style="background: {bg_card_sub}; border: 1px solid {card_border}; border-left: 3px solid {r_color}; padding: 10px 12px; border-radius: 6px; margin-bottom: 8px;">
+                    <div style="font-size: 0.84rem; font-weight: 600; color: {text_main}; margin-bottom: 4px;">{t_item.get('title')}</div>
+                    <div style="font-size: 0.72rem; color: {text_muted}; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Risk: <b style="color: {r_color};">{t_item.get('risk_level')}</b></span>
+                        <span>OCC: <code style="font-family: 'JetBrains Mono', monospace;">v{t_item.get('version', 1)}</code></span>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
             if len(ready_t) > 3:
@@ -546,9 +577,11 @@ if active_module_key == "nav_command_center":
             st.markdown(f"**Approved & Dispatched ({len(appr_t) + len(disp_t)})**")
             for t_item in (appr_t + disp_t)[:2]:
                 st.markdown(f"""
-                <div style="background: #0f172a; border-left: 3px solid #6366f1; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px;">
-                    <div style="font-size: 0.82rem; font-weight: 700; color: #cbd5e1;">{t_item.get('title')}</div>
-                    <div style="font-size: 0.70rem; color: #64748b;">Status: <b>{t_item.get('status')}</b> | Budget: <code>{t_item.get('budget', '$0')}</code></div>
+                <div style="background: {bg_card_sub}; border: 1px solid {card_border}; border-left: 3px solid #2383e2; padding: 10px 12px; border-radius: 6px; margin-bottom: 8px;">
+                    <div style="font-size: 0.84rem; font-weight: 600; color: {text_main}; margin-bottom: 4px;">{t_item.get('title')}</div>
+                    <div style="font-size: 0.72rem; color: {text_muted};">
+                        Status: <span class="notion-tag tag-green">{t_item.get('status')}</span> | Budget: <code>{t_item.get('budget', '$0')}</code>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -561,16 +594,17 @@ if active_module_key == "nav_command_center":
                 p_done = prof.get("tasks_completed", 0)
                 p_badges = prof.get("unlocked_badges", [])
                 
-                b_pills = "".join([f"<span style='background: rgba(99,102,241,0.2); color: #c7d2fe; font-size: 0.65rem; padding: 1px 5px; border-radius: 8px; margin-right: 3px;'>{b}</span>" for b in p_badges[:2]])
+                b_pills = "".join([f"<span class='notion-tag tag-purple' style='margin-right: 4px; margin-top: 3px;'>{b}</span>" for b in p_badges[:2]])
+                is_active = (prof.get("name") == st.session_state.active_user)
                 
                 st.markdown(f"""
-                <div style="background: #1e293b; border: 1px solid #334155; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px;">
+                <div style="background: {bg_card_sub}; border: 1px solid {card_border if not is_active else 'rgba(37,99,235,0.5)'}; padding: 12px 14px; border-radius: 6px; margin-bottom: 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: 700; color: #f8fafc; font-size: 0.88rem;">{prof.get('name')}</span>
-                        <span style="color: #f59e0b; font-weight: 700; font-size: 0.78rem;">{p_flame}</span>
+                        <span style="font-weight: 700; color: {text_main}; font-size: 0.88rem;">{prof.get('name')}</span>
+                        <span class="notion-tag tag-orange">{p_flame}</span>
                     </div>
-                    <div style="font-size: 0.72rem; color: #818cf8; margin: 2px 0 6px 0;">{prof.get('role')} | {p_lvl} ({p_done} tasks)</div>
-                    <div>{b_pills}</div>
+                    <div style="font-size: 0.74rem; color: #93c5fd; margin: 3px 0 6px 0;">{prof.get('role')} • {p_lvl} ({p_done} tasks)</div>
+                    <div style="display: flex; flex-wrap: wrap;">{b_pills}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -578,19 +612,19 @@ if active_module_key == "nav_command_center":
             st.markdown("##### ❤️ System Health & Heartbeats")
             sh_latest = default_store.get_latest_system_health() or SystemHealthMonitor.collect_metrics()
             st.markdown(f"""
-            <div style="background: #1e293b; border: 1px solid #334155; padding: 12px; border-radius: 8px;">
-                <div style="font-size: 0.85rem; font-weight: 700; color: #10b981; margin-bottom: 8px;">● {sh_latest.get('service_name', 'Daemon')} Active</div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">
+            <div style="background: {bg_card_sub}; border: 1px solid {card_border}; padding: 14px; border-radius: 6px;">
+                <div style="font-size: 0.85rem; font-weight: 700; color: #16a34a; margin-bottom: 10px;">● {sh_latest.get('service_name', 'Daemon')} Active</div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: {text_muted}; margin-bottom: 6px;">
                     <span>CPU Load:</span><b>{sh_latest.get('cpu_percent', 0)}%</b>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: {text_muted}; margin-bottom: 6px;">
                     <span>RAM Usage:</span><b>{sh_latest.get('ram_percent', 0)}%</b>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 4px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: {text_muted}; margin-bottom: 6px;">
                     <span>Active Threads:</span><b>{sh_latest.get('active_threads', 1)}</b>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #cbd5e1;">
-                    <span>Status:</span><b style="color: #10b981;">{sh_latest.get('status', 'HEALTHY')}</b>
+                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: {text_muted};">
+                    <span>Status:</span><b style="color: #16a34a;">{sh_latest.get('status', 'HEALTHY')}</b>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -609,17 +643,17 @@ if active_module_key == "nav_command_center":
         for idx, tmpl in enumerate(templates):
             with t_cols[idx % len(t_cols)]:
                 st.markdown(f"""
-                <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 14px; margin-bottom: 12px; height: 100%;">
+                <div style="background: {bg_card_sub}; border: 1px solid {card_border}; border-radius: 6px; padding: 14px; margin-bottom: 12px; height: 100%;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <span style="font-weight: 700; color: #f8fafc; font-size: 0.92rem;">{tmpl.get('name')}</span>
-                        <span style="font-size: 0.72rem; color: #10b981; font-weight: 700;">{tmpl.get('status')}</span>
+                        <span style="font-weight: 700; color: {text_main}; font-size: 0.90rem;">{tmpl.get('name')}</span>
+                        <span class="notion-tag tag-green">{tmpl.get('status')}</span>
                     </div>
-                    <div style="font-size: 0.75rem; color: #818cf8; margin-bottom: 8px;">Trigger: <b>{tmpl.get('trigger_source')}</b></div>
-                    <div style="font-size: 0.72rem; color: #cbd5e1; font-weight: 600; margin-bottom: 4px;">Pipeline Steps ({len(tmpl.get('steps', []))}):</div>
-                    <div style="font-size: 0.70rem; color: #94a3b8; line-height: 1.4;">
+                    <div style="font-size: 0.74rem; color: #93c5fd; margin-bottom: 8px;">Trigger: <b>{tmpl.get('trigger_source')}</b></div>
+                    <div style="font-size: 0.72rem; color: {text_muted}; font-weight: 600; margin-bottom: 4px;">Pipeline Steps ({len(tmpl.get('steps', []))}):</div>
+                    <div style="font-size: 0.70rem; color: {text_muted}; line-height: 1.4;">
                         {"<br/>".join([f"• {s}" for s in tmpl.get('steps', [])])}
                     </div>
-                    <div style="font-size: 0.70rem; color: #e2e8f0; margin-top: 8px; font-weight: 600;">Threshold: {tmpl.get('risk_threshold')}</div>
+                    <div style="font-size: 0.70rem; color: {text_main}; margin-top: 8px; font-weight: 600;">Threshold: {tmpl.get('risk_threshold')}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -772,49 +806,51 @@ elif active_module_key == "nav_hitl":
             if selected_task:
                 st.markdown(f"#### 🔎 Cognitive Audit Panel: `#{selected_task.get('id')}`")
 
-                # Cognitive Risk Banner
+                # Cognitive Risk Banner (Notion Callout Block)
                 risk_lvl = selected_task.get("risk_level", "LOW")
                 conf_pct = int(selected_task.get("confidence_score", 0.85) * 100)
-                risk_class = "risk-banner-critical" if risk_lvl in ("CRITICAL", "HIGH") else ("risk-banner-medium" if risk_lvl == "MEDIUM" else "risk-banner-low")
+                risk_callout_class = "notion-callout-red" if risk_lvl in ("CRITICAL", "HIGH") else ("notion-callout-yellow" if risk_lvl == "MEDIUM" else "notion-callout-green")
                 risk_icon = "🚨" if risk_lvl == "CRITICAL" else ("⚠️" if risk_lvl == "HIGH" else ("📋" if risk_lvl == "MEDIUM" else "✅"))
 
                 st.markdown(f"""
-                <div class="risk-banner {risk_class}">
-                    <div>
-                        <span>{risk_icon} <b>{risk_lvl} RISK PRE-AUDIT EVALUATION</b></span>
+                <div class="notion-callout {risk_callout_class}">
+                    <span style="font-size: 1.3rem;">{risk_icon}</span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 700; font-size: 0.90rem; color: {text_main};">{risk_lvl} RISK PRE-AUDIT EVALUATION</div>
+                        <div style="font-size: 0.78rem; color: {text_muted}; margin-top: 2px;">AI Model Confidence Interval: <b>{conf_pct}%</b> | Domain: <b>{selected_task.get('category', 'General')}</b></div>
                     </div>
-                    <div style="font-size: 0.85rem;">Confidence Interval: <b>{conf_pct}%</b></div>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Structured Facts Grid
+                # Structured Facts Grid (Notion Property Columns)
                 fc1, fc2, fc3, fc4 = st.columns(4)
                 with fc1:
                     st.markdown(f"""
                     <div class="fact-item">
-                        <div class="fact-title">Category</div>
-                        <div class="fact-content">{selected_task.get('category', 'General')}</div>
+                        <div class="fact-title">🏷️ Category</div>
+                        <div class="fact-content"><span class="notion-tag tag-blue">{selected_task.get('category', 'General')}</span></div>
                     </div>
                     """, unsafe_allow_html=True)
                 with fc2:
+                    prio_tag = "tag-red" if selected_task.get('priority') == "critical" else ("tag-orange" if selected_task.get('priority') == "high" else "tag-green")
                     st.markdown(f"""
                     <div class="fact-item">
-                        <div class="fact-title">Priority</div>
-                        <div class="fact-content">{selected_task.get('priority', 'normal').upper()}</div>
+                        <div class="fact-title">🎯 Priority</div>
+                        <div class="fact-content"><span class="notion-tag {prio_tag}">{selected_task.get('priority', 'normal').upper()}</span></div>
                     </div>
                     """, unsafe_allow_html=True)
                 with fc3:
                     st.markdown(f"""
                     <div class="fact-item">
-                        <div class="fact-title">Status</div>
-                        <div class="fact-content">{selected_task.get('status')}</div>
+                        <div class="fact-title">🔒 Status</div>
+                        <div class="fact-content"><span class="notion-tag tag-yellow">{selected_task.get('status')}</span></div>
                     </div>
                     """, unsafe_allow_html=True)
                 with fc4:
                     st.markdown(f"""
                     <div class="fact-item">
-                        <div class="fact-title">OCC Version</div>
-                        <div class="fact-content">v{selected_task.get('version', 1)}</div>
+                        <div class="fact-title">🔢 OCC Version</div>
+                        <div class="fact-content"><code style="font-size: 0.85rem;">v{selected_task.get('version', 1)}</code></div>
                     </div>
                     """, unsafe_allow_html=True)
 
