@@ -7,6 +7,38 @@
 let activeTaskId = null;
 let tasksData = [];
 let auditLogsData = [];
+let currentOperator = "Aryan Sharma";
+let currentOperatorRole = "Lead Developer & Architect";
+
+function switchActiveOperator(opName) {
+  currentOperator = opName;
+  if (opName.includes("Atul")) {
+    currentOperatorRole = "Code Quality Testing & Security";
+  } else if (opName.includes("Aryan")) {
+    currentOperatorRole = "Lead Developer & Architect";
+  } else {
+    currentOperatorRole = "Operations Auditor";
+  }
+  const select = document.getElementById("operatorSelect");
+  if (select && select.value !== opName) {
+    // Add option if not present
+    let exists = false;
+    for (let opt of select.options) {
+      if (opt.value === opName) { exists = true; break; }
+    }
+    if (!exists) {
+      const newOpt = document.createElement("option");
+      newOpt.value = opName;
+      newOpt.textContent = `${opName} (${currentOperatorRole})`;
+      newOpt.style.background = "var(--bg-card)";
+      newOpt.style.color = "var(--text-primary)";
+      select.appendChild(newOpt);
+    }
+    select.value = opName;
+  }
+  renderCommandCenter();
+  renderLedger();
+}
 
 
 // Sample Ingestion Tasks
@@ -111,7 +143,7 @@ function quickApproveTask(taskId, e) {
     id: `log_${Date.now()}`,
     task_id: task.id,
     action: 'QUICK_APPROVE',
-    operator: 'Aryan Sharma',
+    operator_name: currentOperator,
     outcome: 'SUCCESS',
     timestamp: Date.now() / 1000,
     signature: '5c87332713dce12df85c7f8a88f89d0533568cfb19b92c84dd4a8d993012f35c'
@@ -224,10 +256,12 @@ function renderCommandCenter() {
   // 2. Render Operator Gamification Grid
   const opContainer = document.getElementById('ccOperatorProfiles');
   if (opContainer) {
+    const isAryan = currentOperator.includes("Aryan");
+    const isAtul = currentOperator.includes("Atul");
     opContainer.innerHTML = `
-      <div style="background: var(--bg-card-sub); border: 1px solid var(--card-border); padding: 12px; border-radius: 6px; margin-bottom: 10px; cursor: pointer;" onclick="alert('Selected Operator: Aryan Sharma (Lead Developer)')">
+      <div style="background: var(--bg-card-sub); border: 2px solid ${isAryan ? '#6366f1' : 'var(--card-border)'}; padding: 12px; border-radius: 6px; margin-bottom: 10px; cursor: pointer; transition: all 0.15s ease;" onclick="switchActiveOperator('Aryan Sharma')">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">Aryan Sharma</span>
+          <span style="font-weight: 700; color: ${isAryan ? '#818cf8' : 'var(--text-primary)'}; font-size: 0.88rem;">${isAryan ? '🟢 ' : ''}Aryan Sharma</span>
           <span class="badge-tag orange">🔥 7 Days Streak</span>
         </div>
         <div style="font-size: 0.74rem; color: var(--text-secondary); margin: 4px 0 8px 0;">Lead Developer & Architect • Level 2 (14 tasks)</div>
@@ -237,9 +271,9 @@ function renderCommandCenter() {
           <span class="badge-tag purple">100 Tasks Certified 👑</span>
         </div>
       </div>
-      <div style="background: var(--bg-card-sub); border: 1px solid var(--card-border); padding: 12px; border-radius: 6px; cursor: pointer;" onclick="alert('Selected Operator: Atul Yadav (Testing & Security)')">
+      <div style="background: var(--bg-card-sub); border: 2px solid ${isAtul ? '#6366f1' : 'var(--card-border)'}; padding: 12px; border-radius: 6px; cursor: pointer; transition: all 0.15s ease;" onclick="switchActiveOperator('Atul Yadav')">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">Atul Yadav</span>
+          <span style="font-weight: 700; color: ${isAtul ? '#818cf8' : 'var(--text-primary)'}; font-size: 0.88rem;">${isAtul ? '🟢 ' : ''}Atul Yadav</span>
           <span class="badge-tag orange">🔥 3 Days Streak</span>
         </div>
         <div style="font-size: 0.74rem; color: var(--text-secondary); margin: 4px 0 8px 0;">Code Quality Testing & Security • Level 1 (8 tasks)</div>
@@ -690,7 +724,9 @@ function submitRegistration() {
   const first = document.getElementById('regFirstName')?.value || "John";
   const last = document.getElementById('regLastName')?.value || "Doe";
   const email = document.getElementById('regEmail')?.value || "john.doe@company.com";
-  alert(`✅ Account for ${first} ${last} (${email}) created successfully!\nSynced with Notion User Profiles database.`);
+  const fullName = `${first.trim()} ${last.trim()}`;
+  switchActiveOperator(fullName);
+  alert(`✅ Account for ${fullName} (${email}) created successfully!\nSynced with Notion User Profiles database.`);
   switchOtpScreen('otp');
 }
 
@@ -805,7 +841,8 @@ function logAuditEntry(recordId, action, payload) {
     id: auditLogsData.length + 1,
     record_id: recordId,
     action: action,
-    operator_name: "Aryan Sharma",
+    operator_name: currentOperator,
+    payload: payload,
     timestamp: new Date().toISOString(),
     signature: "sha256_" + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2)
   });

@@ -388,9 +388,12 @@ with st.sidebar:
     user_profiles = default_store.list_user_profiles()
     user_names = [u["name"] for u in user_profiles] if user_profiles else ["Aryan Sharma", "Atul Yadav"]
 
-    selected_operator = st.selectbox("Active Operator Profile:", user_names, index=0)
-    st.session_state.active_user = selected_operator
-    current_user = default_store.get_user_by_name(selected_operator)
+    cur_user_idx = user_names.index(st.session_state.active_user) if st.session_state.active_user in user_names else 0
+    selected_operator = st.selectbox("Active Operator Profile:", user_names, index=cur_user_idx, key="active_operator_select_box")
+    if selected_operator != st.session_state.active_user:
+        st.session_state.active_user = selected_operator
+        st.rerun()
+    current_user = default_store.get_user_by_name(st.session_state.active_user)
 
     if current_user:
         auth_badge = "🟢 UNLOCKED" if (st.session_state.biometric_authenticated or st.session_state.otp_verified) else "🔒 LOCKED"
@@ -978,8 +981,8 @@ elif active_module_key == "nav_biometrics":
         sig_task_id = st.text_input("Target Task ID for Signature:", value="task_enterprise_001")
         sig_action = st.selectbox("Action to Authorize:", ["APPROVE_BUDGET", "DISPATCH_COMMUNICATIONS", "BATCH_APPROVE_PAGES", "OVERRIDE_PRIORITY"])
         
-        test_email = "aryan.sharma@company.com" if "Aryan" in st.session_state.active_user else "admin@company.com"
-        test_role = "Lead Auditor & Architect"
+        test_email = f"{st.session_state.active_user.lower().replace(' ', '.')}@aiexperts.edu"
+        test_role = current_user.get("role", "Auditor & Engineer") if current_user else "Auditor & Engineer"
 
         calc_hash = calculate_operator_signature(
             task_id=sig_task_id,

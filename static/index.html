@@ -125,7 +125,10 @@
           </button>
           <div class="operator-chip">
             <span class="status-dot"></span>
-            <span id="operatorDisplay">Aryan Sharma (Lead Developer)</span>
+            <select id="operatorSelect" style="background: transparent; border: none; color: var(--text-primary); font-weight: 700; font-size: 0.78rem; cursor: pointer; outline: none; padding-right: 4px;" onchange="switchActiveOperator(this.value)">
+              <option value="Aryan Sharma" style="background: var(--bg-card); color: var(--text-primary);">Aryan Sharma (Lead Developer)</option>
+              <option value="Atul Yadav" style="background: var(--bg-card); color: var(--text-primary);">Atul Yadav (QA & Security)</option>
+            </select>
           </div>
           <span class="badge-tag green">
             ⚡ Rate Limit: NOMINAL
