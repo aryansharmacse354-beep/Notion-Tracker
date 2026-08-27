@@ -53,6 +53,21 @@ class AuditLedger:
         return hashlib.sha256(signing_material.encode("utf-8")).hexdigest()
 
     @classmethod
+    def genesis_block_hash(cls) -> str:
+        return cls.GENESIS_HASH
+
+    @classmethod
+    def hash_log_entry(cls, record_id: str, action: str, operator_name: str, timestamp: float, payload_data: Any, prev_signature: str = GENESIS_HASH) -> str:
+        if isinstance(payload_data, str):
+            try:
+                payload_dict = json.loads(payload_data)
+            except Exception:
+                payload_dict = {"data": payload_data}
+        else:
+            payload_dict = payload_data or {}
+        return cls.compute_record_signature(record_id, action, operator_name, timestamp, payload_dict, prev_signature)
+
+    @classmethod
     def verify_ledger_chain(cls, log_entries: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Audits an entire sequence of log records to detect tampering or broken hash chains.
 

@@ -446,35 +446,23 @@ class NotionStore:
             cursor.execute("SELECT COUNT(*) FROM audit_logs")
             log_count = cursor.fetchone()[0]
             if log_count == 0:
-                gen_hash = AuditLedger.genesis_block_hash()
+                gen_hash = AuditLedger.GENESIS_HASH
+                t1 = time.time() - 3600
+                t2 = time.time() - 1800
+                t3 = time.time() - 900
+
+                p1 = {"title": "Provisions for Lab Group B", "status": "Ready for Review"}
+                p2 = {"title": "Security Incident: Unauthorized Root Access Attempt", "status": "CRITICAL"}
+                p3 = {"service": "Notion Tracker Gateway", "status": "HEALTHY"}
+
+                s1 = AuditLedger.compute_record_signature("task_001_academic", "INGESTED", "Academic Registration Portal", t1, p1, gen_hash)
+                s2 = AuditLedger.compute_record_signature("task_002_security", "INGESTED", "AWS GuardDuty Ingestion", t2, p2, s1)
+                s3 = AuditLedger.compute_record_signature("system_heartbeat_genesis", "SYSTEM_HEARTBEAT", "SystemHealthMonitor", t3, p3, s2)
+
                 default_logs = [
-                    (
-                        "task_001_academic",
-                        "INGESTED",
-                        "Academic Registration Portal",
-                        time.time() - 3600,
-                        json.dumps({"title": "Provisions for Lab Group B", "status": "Ready for Review"}),
-                        AuditLedger.hash_log_entry("task_001_academic", "INGESTED", "Academic Registration Portal", time.time() - 3600, json.dumps({"title": "Provisions for Lab Group B", "status": "Ready for Review"}), gen_hash),
-                        gen_hash,
-                    ),
-                    (
-                        "task_002_security",
-                        "INGESTED",
-                        "AWS GuardDuty Ingestion",
-                        time.time() - 1800,
-                        json.dumps({"title": "Security Incident: Unauthorized Root Access Attempt", "status": "CRITICAL"}),
-                        AuditLedger.hash_log_entry("task_002_security", "INGESTED", "AWS GuardDuty Ingestion", time.time() - 1800, json.dumps({"title": "Security Incident: Unauthorized Root Access Attempt", "status": "CRITICAL"}), gen_hash),
-                        gen_hash,
-                    ),
-                    (
-                        "system_heartbeat_genesis",
-                        "SYSTEM_HEARTBEAT",
-                        "SystemHealthMonitor",
-                        time.time() - 900,
-                        json.dumps({"service": "Notion Tracker Gateway", "status": "HEALTHY"}),
-                        AuditLedger.hash_log_entry("system_heartbeat_genesis", "SYSTEM_HEARTBEAT", "SystemHealthMonitor", time.time() - 900, json.dumps({"service": "Notion Tracker Gateway", "status": "HEALTHY"}), gen_hash),
-                        gen_hash,
-                    ),
+                    ("task_001_academic", "INGESTED", "Academic Registration Portal", t1, json.dumps(p1), s1, gen_hash),
+                    ("task_002_security", "INGESTED", "AWS GuardDuty Ingestion", t2, json.dumps(p2), s2, s1),
+                    ("system_heartbeat_genesis", "SYSTEM_HEARTBEAT", "SystemHealthMonitor", t3, json.dumps(p3), s3, s2),
                 ]
                 cursor.executemany("""
                     INSERT OR REPLACE INTO audit_logs (
