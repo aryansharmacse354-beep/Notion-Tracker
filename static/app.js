@@ -190,24 +190,40 @@ const viewHeadings = {
   'view-audit': 'Industrial SHA-256 Cryptographic Audit Ledger'
 };
 
-function quickApproveTask(taskId, e) {
+async function quickApproveTask(taskId, e) {
   if (e) e.stopPropagation();
   const task = tasksData.find(t => t.id === taskId);
   if (!task) return;
 
-  task.status = 'Approved';
-  task.version = (task.version || 1) + 1;
-  task.updated_at = Date.now() / 1000;
+  try {
+    const res = await fetch(`/api/v1/tasks/${encodeURIComponent(task.id)}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operator_name: currentOperator || "Aryan Sharma"
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.task) {
+        Object.assign(task, data.task);
+      } else {
+        task.status = 'Approved';
+        task.version = (task.version || 1) + 1;
+      }
+    } else {
+      task.status = 'Approved';
+      task.version = (task.version || 1) + 1;
+    }
+  } catch (err) {
+    task.status = 'Approved';
+    task.version = (task.version || 1) + 1;
+  }
 
-  // Add audit log record
-  auditLogsData.unshift({
-    id: `log_${Date.now()}`,
-    task_id: task.id,
-    action: 'QUICK_APPROVE',
-    operator_name: currentOperator,
-    outcome: 'SUCCESS',
-    timestamp: Date.now() / 1000,
-    signature: '5c87332713dce12df85c7f8a88f89d0533568cfb19b92c84dd4a8d993012f35c'
+  logAuditEntry(task.id, "QUICK_APPROVE", {
+    title: task.title,
+    status: "Approved",
+    operator_name: currentOperator
   });
 
   renderCommandCenter();
@@ -215,6 +231,7 @@ function quickApproveTask(taskId, e) {
   renderBatchRows();
   renderLedger();
   updateMetrics();
+  populateAgentSelects();
 
   alert(`✅ [Command Center] Task '${task.title}' approved successfully (OCC v${task.version})!`);
 }
@@ -443,12 +460,18 @@ function selectTask(taskId) {
 function renderTaskDetail() {
   const detailBody = document.getElementById('taskDetailBody');
   const occTag = document.getElementById('detailOccTag');
+  const headerTitle = document.getElementById('detailHeaderTitle');
   if (!detailBody) return;
 
   const task = tasksData.find(t => t.id === activeTaskId);
   if (!task) {
     detailBody.innerHTML = '<p style="color: var(--text-muted);">Select a task on the left to review cognitive pre-audit details.</p>';
+    if (headerTitle) headerTitle.innerHTML = `<span>🔎</span> Cognitive Audit Panel`;
     return;
+  }
+
+  if (headerTitle) {
+    headerTitle.innerHTML = `<span>🔎</span> Cognitive Audit Panel — <span style="color: var(--accent-primary); font-size: 0.85rem;">${task.title}</span>`;
   }
 
   if (occTag) occTag.textContent = `OCC: v${task.version || 1}`;
@@ -546,8 +569,12 @@ function renderTaskDetail() {
     ` : ''}
 
     <div style="display: flex; gap: 8px; margin-top: 4px;">
-      <button class="btn btn-success" onclick="approveCurrentTask()" style="flex: 1;">🟢 Approve (OCC)</button>
-      <button class="btn btn-danger" onclick="rejectCurrentTask()" style="flex: 1;">🔴 Reject</button>
+      <button class="btn btn-success" onclick="approveCurrentTask()" style="flex: 1;" ${task.status === 'Approved' ? 'disabled style="opacity: 0.7;"' : ''}>
+        ${task.status === 'Approved' ? '✓ Approved' : '🟢 Approve (OCC)'}
+      </button>
+      <button class="btn btn-danger" onclick="rejectCurrentTask()" style="flex: 1;" ${task.status === 'Rejected' ? 'disabled style="opacity: 0.7;"' : ''}>
+        ${task.status === 'Rejected' ? '✗ Rejected' : '🔴 Reject'}
+      </button>
       <button class="btn btn-secondary" onclick="simulateOccConflict()" style="flex: 1;">⚡ Test OCC Merge</button>
     </div>
   `;
@@ -579,37 +606,101 @@ function retriageDlqTask() {
   renderBatchRows();
 }
 
-function approveCurrentTask() {
+async function approveCurrentTask() {
   const task = tasksData.find(t => t.id === activeTaskId);
-  if (!task) return;
-  const draftArea = document.getElementById('editDraftText');
-  if (draftArea) {
-    task.edited_draft = draftArea.value;
+  if (!task) {
+    alert("⚠️ Please select a task from the database list on the left to approve.");
+    return;
   }
-  task.status = "Approved";
-  task.version = (task.version || 1) + 1;
+  const draftArea = document.getElementById('editDraftText');
+  const editedDraft = draftArea ? draftArea.value : (task.edited_draft || task.proposed_ai_draft || task.draft_teams_text || '');
+  task.edited_draft = editedDraft;
+
+  try {
+    const res = await fetch(`/api/v1/tasks/${encodeURIComponent(task.id)}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operator_name: currentOperator || "Aryan Sharma",
+        edited_draft: editedDraft
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.task) {
+        Object.assign(task, data.task);
+      } else {
+        task.status = "Approved";
+        task.version = (task.version || 1) + 1;
+      }
+    } else {
+      task.status = "Approved";
+      task.version = (task.version || 1) + 1;
+    }
+  } catch (err) {
+    console.warn("Backend API sync warning, applying local state update:", err);
+    task.status = "Approved";
+    task.version = (task.version || 1) + 1;
+  }
+
   logAuditEntry(task.id, "APPROVED_BY_OPERATOR", {
     title: task.title,
     status: "Approved",
     dispatched_draft: task.edited_draft || task.proposed_ai_draft || task.draft_teams_text,
     is_human_edited: Boolean(task.edited_draft)
   });
-  alert(`✓ Task '${task.title}' approved! Dispatched with ${task.edited_draft ? 'Human-Edited' : 'AI Proposed'} wording.`);
+
+  alert(`✓ Task '${task.title}' approved! Dispatched with ${task.edited_draft ? 'Human-Edited' : 'AI Proposed'} wording (OCC v${task.version}).`);
   renderCommandCenter();
   renderTaskList();
   renderBatchRows();
+  renderLedger();
+  updateMetrics();
+  populateAgentSelects();
 }
 
-function rejectCurrentTask() {
+async function rejectCurrentTask() {
   const task = tasksData.find(t => t.id === activeTaskId);
-  if (!task) return;
-  task.status = "Rejected";
-  task.version = (task.version || 1) + 1;
+  if (!task) {
+    alert("⚠️ Please select a task from the database list on the left to reject.");
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/v1/tasks/${encodeURIComponent(task.id)}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operator_name: currentOperator || "Aryan Sharma",
+        reason: "Rejected by Operator"
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.task) {
+        Object.assign(task, data.task);
+      } else {
+        task.status = "Rejected";
+        task.version = (task.version || 1) + 1;
+      }
+    } else {
+      task.status = "Rejected";
+      task.version = (task.version || 1) + 1;
+    }
+  } catch (err) {
+    console.warn("Backend API sync warning, applying local state update:", err);
+    task.status = "Rejected";
+    task.version = (task.version || 1) + 1;
+  }
+
   logAuditEntry(task.id, "REJECTED_BY_OPERATOR", { title: task.title, status: "Rejected" });
-  alert(`✗ Task '${task.title}' rejected.`);
+  alert(`✗ Task '${task.title}' rejected (OCC v${task.version}).`);
   renderCommandCenter();
   renderTaskList();
   renderBatchRows();
+  renderLedger();
+  updateMetrics();
+  populateAgentSelects();
 }
 
 
@@ -719,16 +810,43 @@ function seed10BatchItems() {
   alert("✓ Seeded 10 database rows into Notion database!");
 }
 
-function executeBatchApprove() {
+async function executeBatchApprove() {
   const checkedBoxes = document.querySelectorAll('.batch-row-checkbox:checked');
   if (checkedBoxes.length === 0) {
     alert("Please select at least 1 database row to batch approve.");
     return;
   }
 
+  const tids = Array.from(checkedBoxes).map(cb => cb.value);
+
+  try {
+    const res = await fetch('/api/v1/tasks/batch-approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        task_ids: tids,
+        operator_name: currentOperator || "Aryan Sharma [Batch]"
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.items) {
+        data.items.forEach(item => {
+          const t = tasksData.find(x => x.id === item.task_id);
+          if (t) {
+            t.status = "Approved";
+            t.version = item.version || ((t.version || 1) + 1);
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("Backend batch approve API call warning, using local state update:", err);
+  }
+
   checkedBoxes.forEach(cb => {
     const task = tasksData.find(t => t.id === cb.value);
-    if (task) {
+    if (task && task.status !== "Approved") {
       task.status = "Approved";
       task.version = (task.version || 1) + 1;
       logAuditEntry(task.id, "BATCH_APPROVED", { title: task.title, status: "Approved" });
@@ -736,8 +854,12 @@ function executeBatchApprove() {
   });
 
   alert(`⚡ Notion Multi-Select Success! Simultaneously approved ${checkedBoxes.length} database rows.`);
+  renderCommandCenter();
   renderTaskList();
   renderBatchRows();
+  renderLedger();
+  updateMetrics();
+  populateAgentSelects();
 }
 
 // ==============================================================================

@@ -251,18 +251,24 @@ def approve_task(task_id: str, req: ApproveTaskRequest = ApproveTaskRequest()):
     return {"status": "APPROVED", "task": updated, "conflict": conflict, "details": details}
 
 
+class RejectTaskRequest(BaseModel):
+    reason: Optional[str] = "Rejected by Operator"
+    operator_name: Optional[str] = "Aryan Sharma"
+
+
 @app.post("/api/v1/tasks/{task_id}/reject")
-def reject_task(task_id: str, reason: str = "Rejected by Operator", operator_name: str = "Aryan Sharma"):
+def reject_task(task_id: str, req: RejectTaskRequest = RejectTaskRequest()):
     """Rejects a task with OCC state transition."""
     task = default_store.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
     
+    op_name = req.operator_name or "Aryan Sharma"
     updated, conflict, details = default_store.update_task_with_occ(
         task_id=task_id,
         base_record=task,
         local_updates={"status": "Rejected"},
-        operator_name=operator_name,
+        operator_name=op_name,
     )
     return {"status": "REJECTED", "task": updated, "conflict": conflict}
 
