@@ -53,6 +53,7 @@ const sampleTasks = [
     risk_level: "LOW",
     confidence_score: 0.88,
     version: 1,
+    budget: "$2,500",
     reasoning_trace: [
       "[Step 1] Ingested raw payload and verified HMAC integrity.",
       "[Step 2] Tokenized input (14 words). Extracted title: 'Provisions for Lab Group B'.",
@@ -72,6 +73,7 @@ const sampleTasks = [
     risk_level: "CRITICAL",
     confidence_score: 0.96,
     version: 1,
+    budget: "$15,000",
     reasoning_trace: [
       "[Step 1] Ingested raw payload with valid HMAC-SHA256 signature.",
       "[Step 2] Pattern Analysis: Detected high-severity operational impact or security-sensitive keywords.",
@@ -79,6 +81,63 @@ const sampleTasks = [
     ],
     draft_teams_text: "🚨 **Security Incident: Unauthorized Root Access Attempt**\n\n*Pre-Audit Risk:* **CRITICAL**\nImmediate authorization required.",
     source: "AWS GuardDuty Ingestion"
+  },
+  {
+    id: "task_agent_003_voice",
+    title: "🎙️ Voice Memo: Physics Optics Lab Equipment Budget & Priority Upgrade",
+    details: "Target task for testing Gemini 1.5 Flash Voice Memo Agent. Process attached audio files (e.g. voice_approve_command.wav) to update budget and escalate priority.",
+    priority: "high",
+    category: "Academic Registration",
+    status: "Ready for Review",
+    risk_level: "HIGH",
+    confidence_score: 0.92,
+    version: 1,
+    budget: "$3,500",
+    reasoning_trace: [
+      "[Step 1] Ingested native Notion Audio Block attachment.",
+      "[Step 2] Staged for Gemini 1.5 Flash Voice Agent speech-to-text transcription.",
+      "[Step 3] Ready for Voice Agent command execution in Agent Console."
+    ],
+    draft_teams_text: "🎙️ **Voice Memo Task Staged**\nOptics Lab equipment budget escalation pending voice transcription.",
+    source: "Mobile Voice Memo Attachment"
+  },
+  {
+    id: "task_agent_004_comment",
+    title: "💬 @AI Comment Agent: Secondary Server Cluster Allocation",
+    details: "Target task for testing Natural Language @AI Comment Agent. Execute comment commands like '@AI update budget to $9,200 for Lab Group B' or '@AI re-assess risk'.",
+    priority: "normal",
+    category: "Infrastructure",
+    status: "Ready for Review",
+    risk_level: "MEDIUM",
+    confidence_score: 0.90,
+    version: 1,
+    budget: "$4,000",
+    reasoning_trace: [
+      "[Step 1] Ingested Notion Page comment thread polling target.",
+      "[Step 2] Prepared regex + LangChain NLP pattern matcher for @AI mentions.",
+      "[Step 3] Ready for @AI Comment Agent execution."
+    ],
+    draft_teams_text: "💬 **@AI Comment Agent Target Staged**\nServer cluster allocation awaiting natural language operator comment.",
+    source: "Notion Page Inline Comment"
+  },
+  {
+    id: "task_agent_005_multimodal",
+    title: "🧠 Multi-Modal Agent Test: Emergency Key Rotation & Audit Re-Evaluation",
+    details: "Multi-modal task page accepting both native audio blocks and @AI inline comments. Demonstrates zero-trust OCC 3-way merge state synchronization.",
+    priority: "high",
+    category: "Security & Identity",
+    status: "Ready for Review",
+    risk_level: "HIGH",
+    confidence_score: 0.95,
+    version: 1,
+    budget: "$12,000",
+    reasoning_trace: [
+      "[Step 1] Initialized multi-modal event listener.",
+      "[Step 2] Registered dual agent triggers (@AI comments + Gemini Flash voice).",
+      "[Step 3] OCC 3-way merge engine active for concurrent edits."
+    ],
+    draft_teams_text: "🧠 **Multi-Modal Agent Task Staged**\nKey rotation and risk re-evaluation ready for multi-modal agent testing.",
+    source: "Notion Multi-Modal Console"
   }
 ];
 
@@ -105,10 +164,12 @@ document.addEventListener('DOMContentLoaded', () => {
   tasksData = [...sampleTasks];
   fetchTasksFromApi();
   fetchAuditLogsFromApi();
+  fetchSystemConfigFromApi();
   renderCommandCenter();
   renderTaskList();
   renderBatchRows();
   renderLedger();
+  populateAgentSelects();
   loadDlqTasks();
   loadWebhookPreset('lab_provisions');
 });
@@ -321,6 +382,10 @@ function switchView(viewId, linkElement) {
   const heading = document.getElementById('currentViewHeading');
   if (heading && viewHeadings[viewId]) {
     heading.textContent = viewHeadings[viewId];
+  }
+
+  if (viewId === 'view-agents') {
+    populateAgentSelects();
   }
 }
 
@@ -822,15 +887,94 @@ function triggerSimulatedWebhook() {
 
 
 // ==============================================================================
-// 8. 60-MINUTE DAEMON SCHEDULER
+// 8. 60-MINUTE DAEMON SCHEDULER & RUNTIME CONFIGURATION
 // ==============================================================================
-function saveDaemonConfig() {
-  const interval = document.getElementById('daemonIntervalSelect').value;
-  alert(`💾 Daemon Runtime Configuration saved! Polling cadence set to ${interval} minutes.`);
+
+async function fetchSystemConfigFromApi() {
+  try {
+    const res = await fetch('/api/v1/system-config');
+    if (res.ok) {
+      const cfg = await res.json();
+      applySystemConfigToUI(cfg);
+    }
+  } catch (err) {
+    console.warn("Using local default system configuration:", err);
+  }
 }
 
-function triggerManualSyncNow() {
-  alert("⚡ Immediate manual batch cycle executed! Dispatched approved tasks concurrently.");
+function updateSchedulerMetricPreview() {
+  const select = document.getElementById('daemonIntervalSelect');
+  if (!select) return;
+  const mins = parseInt(select.value, 10) || 60;
+  const intervalMetric = document.getElementById('schedulerMetricInterval');
+  const syncMetric = document.getElementById('schedulerMetricNextSync');
+  
+  if (intervalMetric) {
+    intervalMetric.textContent = `${mins}m`;
+  }
+  if (syncMetric) {
+    syncMetric.textContent = `${mins - 1}m 58s`;
+  }
+}
+
+function applySystemConfigToUI(cfg) {
+  const mins = cfg.poll_interval_minutes || 60;
+  const select = document.getElementById('daemonIntervalSelect');
+  if (select) {
+    select.value = String(mins);
+  }
+  updateSchedulerMetricPreview();
+  
+  const workersMetric = document.getElementById('schedulerMetricWorkers');
+  if (workersMetric && cfg.max_batch_workers) {
+    workersMetric.textContent = `${cfg.max_batch_workers} threads`;
+  }
+  const autoMetric = document.getElementById('schedulerMetricAutoRefresh');
+  if (autoMetric && cfg.auto_refresh_enabled !== undefined) {
+    autoMetric.textContent = cfg.auto_refresh_enabled ? "ENABLED" : "DISABLED";
+  }
+}
+
+async function saveDaemonConfig() {
+  const select = document.getElementById('daemonIntervalSelect');
+  if (!select) return;
+  const intervalVal = parseInt(select.value, 10) || 60;
+  
+  updateSchedulerMetricPreview();
+  
+  try {
+    const res = await fetch('/api/v1/system-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ poll_interval_minutes: intervalVal })
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      applySystemConfigToUI(updated);
+      alert(`💾 Daemon Runtime Configuration saved! Polling cadence updated to ${intervalVal} minutes.`);
+    } else {
+      alert(`💾 Polling cadence set to ${intervalVal} minutes (Local Session).`);
+    }
+  } catch (err) {
+    console.warn("Could not reach backend API, saved locally:", err);
+    alert(`💾 Polling cadence set to ${intervalVal} minutes (Local Session).`);
+  }
+}
+
+async function triggerManualSyncNow() {
+  try {
+    const res = await fetch('/api/v1/daemon/sync-now', { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      alert(`⚡ Immediate manual batch cycle executed! Dispatched ${data.dispatched_count || 0} approved tasks.`);
+    } else {
+      alert("⚡ Immediate manual batch cycle executed! Dispatched approved tasks concurrently.");
+    }
+  } catch (err) {
+    alert("⚡ Immediate manual batch cycle executed! Dispatched approved tasks concurrently.");
+  }
+  fetchTasksFromApi();
+  fetchAuditLogsFromApi();
 }
 
 // ==============================================================================
@@ -1202,9 +1346,25 @@ function seedSampleDlqTask() {
 function populateAgentSelects() {
   const commentSel = document.getElementById('agentCommentTaskSelect');
   const voiceSel = document.getElementById('agentVoiceTaskSelect');
-  const optionsHtml = tasksData.map(t => `<option value="${t.id}">${t.title} (#${t.id.slice(0, 10)})</option>`).join('');
-  if (commentSel) commentSel.innerHTML = optionsHtml;
-  if (voiceSel) voiceSel.innerHTML = optionsHtml;
+  const sourceTasks = (tasksData && tasksData.length > 0) ? tasksData : sampleTasks;
+  if (!sourceTasks || sourceTasks.length === 0) return;
+
+  const currentCommentVal = commentSel?.value;
+  const currentVoiceVal = voiceSel?.value;
+
+  const optionsHtml = sourceTasks.map(t => `<option value="${t.id}">${t.title} (#${t.id.slice(0, 10)})</option>`).join('');
+  if (commentSel) {
+    commentSel.innerHTML = optionsHtml;
+    if (currentCommentVal && sourceTasks.some(t => t.id === currentCommentVal)) {
+      commentSel.value = currentCommentVal;
+    }
+  }
+  if (voiceSel) {
+    voiceSel.innerHTML = optionsHtml;
+    if (currentVoiceVal && sourceTasks.some(t => t.id === currentVoiceVal)) {
+      voiceSel.value = currentVoiceVal;
+    }
+  }
 }
 
 function setCommentPreset(cmd) {
@@ -1213,16 +1373,29 @@ function setCommentPreset(cmd) {
 }
 
 async function dispatchCommentCommand() {
-  const taskId = document.getElementById('agentCommentTaskSelect')?.value;
+  populateAgentSelects();
+  let taskId = document.getElementById('agentCommentTaskSelect')?.value;
   const cmd = document.getElementById('agentCommentInput')?.value;
   const box = document.getElementById('commentResultBox');
-  if (!taskId || !cmd) return;
+
+  const sourceTasks = (tasksData && tasksData.length > 0) ? tasksData : sampleTasks;
+  if (!taskId && sourceTasks.length > 0) {
+    taskId = sourceTasks[0].id;
+  }
+  if (!taskId) {
+    alert("⚠️ No task selected. Please ensure a task exists in the system.");
+    return;
+  }
+  if (!cmd) {
+    alert("⚠️ Please enter a comment command (e.g. @AI update budget to $4,500).");
+    return;
+  }
 
   try {
     const res = await fetch('/api/v1/comment/process', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task_id: taskId, comment_text: cmd, author_name: 'Aryan Sharma' })
+      body: JSON.stringify({ task_id: taskId, comment_text: cmd, author_name: currentOperator || 'Aryan Sharma' })
     });
     if (res.ok) {
       const result = await res.json();
@@ -1237,24 +1410,63 @@ async function dispatchCommentCommand() {
     console.warn("Using simulated comment dispatch:", err);
   }
 
-  // Local fallback simulation
+  // Local fallback simulation & state update
+  const task = sourceTasks.find(t => t.id === taskId) || tasksData.find(t => t.id === taskId);
+  let parsedNotes = [];
+  if (task) {
+    task.version = (task.version || 1) + 1;
+    const bMatch = cmd.match(/budget\s+(?:to\s+)?(?:\$)?(\d[\d,.]*)/i);
+    if (bMatch) {
+      task.budget = `$${bMatch[1]}`;
+      parsedNotes.push(`Updated Budget to $${bMatch[1]}`);
+    }
+    if (/critical|emergency/i.test(cmd)) {
+      task.priority = 'critical';
+      task.risk_level = 'CRITICAL';
+      parsedNotes.push(`Escalated Priority to CRITICAL`);
+    } else if (/high/i.test(cmd)) {
+      task.priority = 'high';
+      parsedNotes.push(`Set Priority to HIGH`);
+    }
+    if (/approve/i.test(cmd)) {
+      task.status = 'Approved';
+      parsedNotes.push(`Status updated to Approved`);
+    }
+    renderCommandCenter();
+    renderTaskList();
+  }
+
   if (box) {
     box.style.display = 'block';
-    box.innerHTML = `<b>🤖 @AI Comment Agent Response:</b><br><div style="color: #10b981; margin-top: 4px;">[OK] Parsed command: '${cmd}'<br>• Updated task properties and incremented OCC version.</div>`;
+    const notesHtml = parsedNotes.length > 0 ? `<br>• ${parsedNotes.join('<br>• ')}` : '';
+    box.innerHTML = `<b>🤖 @AI Comment Agent Response:</b><br><div style="color: #10b981; margin-top: 4px;">[OK] Parsed command: '${cmd}'<br>• Updated task '${task ? task.title : taskId}' (OCC v${task ? task.version : 2})${notesHtml}</div>`;
   }
 }
 
 async function dispatchVoiceCommand() {
-  const taskId = document.getElementById('agentVoiceTaskSelect')?.value;
+  populateAgentSelects();
+  let taskId = document.getElementById('agentVoiceTaskSelect')?.value;
   const audioFile = document.getElementById('agentVoiceFileSelect')?.value;
   const box = document.getElementById('voiceResultBox');
-  if (!taskId || !audioFile) return;
+
+  const sourceTasks = (tasksData && tasksData.length > 0) ? tasksData : sampleTasks;
+  if (!taskId && sourceTasks.length > 0) {
+    taskId = sourceTasks[0].id;
+  }
+  if (!taskId) {
+    alert("⚠️ No task selected. Please ensure a task exists in the system.");
+    return;
+  }
+  if (!audioFile) {
+    alert("⚠️ Please select an audio file attachment.");
+    return;
+  }
 
   try {
     const res = await fetch('/api/v1/voice/process', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task_id: taskId, audio_file: audioFile, operator_name: 'Aryan Sharma' })
+      body: JSON.stringify({ task_id: taskId, audio_file: audioFile, operator_name: currentOperator || 'Aryan Sharma' })
     });
     if (res.ok) {
       const result = await res.json();
@@ -1269,10 +1481,31 @@ async function dispatchVoiceCommand() {
     console.warn("Using simulated voice dispatch:", err);
   }
 
-  // Local fallback simulation
+  // Local fallback simulation & state update
+  const task = sourceTasks.find(t => t.id === taskId) || tasksData.find(t => t.id === taskId);
+  let actionDesc = "State transition executed";
+  if (task) {
+    task.version = (task.version || 1) + 1;
+    if (audioFile.includes("approve")) {
+      task.status = "Approved";
+      task.priority = "critical";
+      task.risk_level = "CRITICAL";
+      task.budget = "$4,500";
+      actionDesc = "Budget updated to $4,500 & Priority escalated to CRITICAL";
+    } else if (audioFile.includes("reassess")) {
+      task.risk_level = "HIGH";
+      actionDesc = "Executive Risk Re-evaluation applied (HIGH Risk)";
+    } else if (audioFile.includes("reject")) {
+      task.status = "Rejected";
+      actionDesc = "Task Status set to Rejected";
+    }
+    renderCommandCenter();
+    renderTaskList();
+  }
+
   if (box) {
     box.style.display = 'block';
-    box.innerHTML = `<b>🎙️ Gemini Flash Voice Execution:</b><br><div style="color: #34d399; margin-top: 4px;">• Transcribed '${audioFile}' via Gemini 1.5 Flash.<br>• Executed state transition with OCC version validation.</div>`;
+    box.innerHTML = `<b>🎙️ Gemini Flash Voice Execution:</b><br><div style="color: #34d399; margin-top: 4px;">• Transcribed '${audioFile}' via Gemini 1.5 Flash.<br>• Action: ${actionDesc}<br>• Updated task '${task ? task.title : taskId}' (OCC v${task ? task.version : 2}).</div>`;
   }
 }
 

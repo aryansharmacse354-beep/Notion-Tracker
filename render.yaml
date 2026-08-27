@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: notion-tracker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run_app.py
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: STREAMLIT_SERVER_HEADLESS
+        value: "true"
+      - key: STORAGE_MODE
+        value: hybrid
+      - key: WEBHOOK_SECRET
+        generateValue: true

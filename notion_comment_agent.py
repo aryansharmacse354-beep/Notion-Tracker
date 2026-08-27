@@ -80,10 +80,19 @@ class NotionCommentAgent:
         elif "budget" in lower_cmd:
             budget_match = re.search(r"(?:\$)?(\d[\d,.]*)", command_body)
             budget_str = f"${budget_match.group(1)}" if budget_match else "$5,000"
+            local_updates = {"budget": budget_str}
+
+            # Extract priority escalation if present in compound comment
+            if "critical" in lower_cmd or "emergency" in lower_cmd or "escalate" in lower_cmd:
+                local_updates["priority"] = "critical"
+                local_updates["risk_level"] = "CRITICAL"
+            elif "high" in lower_cmd:
+                local_updates["priority"] = "high"
+
             updated, conflict, _ = default_store.update_task_with_occ(
                 task_id=task_id,
                 base_record=task,
-                local_updates={"budget": budget_str},
+                local_updates=local_updates,
                 operator_name=f"{author_name} [@AI Budget Update]",
             )
             reasoning = [

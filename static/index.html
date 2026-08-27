@@ -426,30 +426,30 @@
             <div class="metrics-strip" style="margin-bottom: 20px;">
               <div class="metric-card">
                 <div class="metric-txt">Polling Interval</div>
-                <div class="metric-num">60m</div>
+                <div class="metric-num" id="schedulerMetricInterval">60m</div>
               </div>
               <div class="metric-card success">
                 <div class="metric-txt">Auto-Refresh</div>
-                <div class="metric-num" style="font-size: 1.2rem;">ENABLED</div>
+                <div class="metric-num" id="schedulerMetricAutoRefresh" style="font-size: 1.2rem;">ENABLED</div>
               </div>
               <div class="metric-card">
                 <div class="metric-txt">Next Scheduled Sync</div>
-                <div class="metric-num" style="font-size: 1.2rem;">58m 22s</div>
+                <div class="metric-num" id="schedulerMetricNextSync" style="font-size: 1.2rem;">58m 22s</div>
               </div>
               <div class="metric-card">
                 <div class="metric-txt">Batch Worker Pool</div>
-                <div class="metric-num">10 threads</div>
+                <div class="metric-num" id="schedulerMetricWorkers">10 threads</div>
               </div>
             </div>
 
             <div class="form-group">
               <label class="form-label">Polling Interval Cadence</label>
-              <select id="daemonIntervalSelect" class="form-control">
+              <select id="daemonIntervalSelect" class="form-control" onchange="updateSchedulerMetricPreview()">
                 <option value="60" selected>60 Minutes (Production Enterprise Default)</option>
                 <option value="30">30 Minutes</option>
                 <option value="15">15 Minutes</option>
                 <option value="5">5 Minutes</option>
-                <option value="1">1 Minute</option>
+                <option value="1">1 Minute (Rapid Test Mode)</option>
               </select>
             </div>
 
@@ -540,7 +540,11 @@
               <div class="form-group">
                 <label class="form-label">Target Task for Comment</label>
                 <select id="agentCommentTaskSelect" class="form-control">
-                  <!-- Rendered via JS -->
+                  <option value="task_agent_004_comment">💬 @AI Comment Agent: Secondary Server Cluster Allocation (#task_agent_)</option>
+                  <option value="task_agent_003_voice">🎙️ Voice Memo: Physics Optics Lab Equipment Budget & Priority Upgrade (#task_agent_)</option>
+                  <option value="task_agent_005_multimodal">🧠 Multi-Modal Agent Test: Emergency Key Rotation & Audit Re-Evaluation (#task_agent_)</option>
+                  <option value="task_001_academic">Provisions for Lab Group B (#task_001_ac)</option>
+                  <option value="task_002_security">Security Incident: Unauthorized Root Access Attempt (#task_002_se)</option>
                 </select>
               </div>
               <div class="form-group">
@@ -575,7 +579,11 @@
               <div class="form-group">
                 <label class="form-label">Target Task for Voice Memo</label>
                 <select id="agentVoiceTaskSelect" class="form-control">
-                  <!-- Rendered via JS -->
+                  <option value="task_agent_003_voice">🎙️ Voice Memo: Physics Optics Lab Equipment Budget & Priority Upgrade (#task_agent_)</option>
+                  <option value="task_agent_004_comment">💬 @AI Comment Agent: Secondary Server Cluster Allocation (#task_agent_)</option>
+                  <option value="task_agent_005_multimodal">🧠 Multi-Modal Agent Test: Emergency Key Rotation & Audit Re-Evaluation (#task_agent_)</option>
+                  <option value="task_001_academic">Provisions for Lab Group B (#task_001_ac)</option>
+                  <option value="task_002_security">Security Incident: Unauthorized Root Access Attempt (#task_002_se)</option>
                 </select>
               </div>
               <div class="form-group">

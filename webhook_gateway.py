@@ -348,7 +348,7 @@ def process_voice_command(req: VoiceCommandRequest):
     parsed = default_voice_agent.process_voice_command(req.audio_file)
     exec_res = default_voice_agent.execute_voice_command_in_notion(
         task_id=req.task_id,
-        command_data=parsed,
+        analysis_results=parsed,
         operator_name=req.operator_name or "Aryan Sharma",
     )
     task = default_store.get_task(req.task_id)

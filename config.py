@@ -20,9 +20,26 @@ except ImportError:
     pass
 
 
+def _safe_int(val: str, default: int) -> int:
+    if not val or not str(val).strip():
+        return default
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return default
+
+def _safe_float(val: str, default: float) -> float:
+    if not val or not str(val).strip():
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+
 # Webhook Ingestion Security
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "super_secret_enterprise_notion_key_2026")
-MAX_TIMESTAMP_DRIFT_SECONDS = int(os.getenv("MAX_TIMESTAMP_DRIFT_SECONDS", "300"))
+MAX_TIMESTAMP_DRIFT_SECONDS = _safe_int(os.getenv("MAX_TIMESTAMP_DRIFT_SECONDS"), 300)
 
 # Notion Configuration
 NOTION_TOKEN = os.getenv("NOTION_TOKEN", "")
@@ -36,8 +53,8 @@ NOTION_USERS_DB_ID = os.getenv("NOTION_USERS_DB_ID", "mock_users_db_003")
 STORAGE_MODE = os.getenv("STORAGE_MODE", "hybrid")
 
 # Token Bucket Rate Limiter
-RATE_LIMIT_CAPACITY = float(os.getenv("RATE_LIMIT_CAPACITY", "10.0"))
-RATE_LIMIT_REPLENISH_RATE = float(os.getenv("RATE_LIMIT_REPLENISH_RATE", "2.0"))
+RATE_LIMIT_CAPACITY = _safe_float(os.getenv("RATE_LIMIT_CAPACITY"), 10.0)
+RATE_LIMIT_REPLENISH_RATE = _safe_float(os.getenv("RATE_LIMIT_REPLENISH_RATE"), 2.0)
 
 # Outbound Notification Targets
 TEAMS_WEBHOOK_URL = os.getenv("TEAMS_WEBHOOK_URL", "")
@@ -51,18 +68,41 @@ ADMIN_OVERRIDE_PIN = os.getenv("ADMIN_OVERRIDE_PIN", "748291")
 
 # Server & Network Ports
 GATEWAY_HOST = os.getenv("GATEWAY_HOST", "0.0.0.0")
-GATEWAY_PORT = int(os.getenv("GATEWAY_PORT", "8000"))
-DASHBOARD_PORT = int(os.getenv("DASHBOARD_PORT", "8501"))
+GATEWAY_PORT = _safe_int(os.getenv("PORT") or os.getenv("GATEWAY_PORT"), 8000)
+DASHBOARD_PORT = _safe_int(os.getenv("DASHBOARD_PORT"), 8501)
+
 
 # 60-Minute Background Daemon Polling & State Synchronization
-POLL_INTERVAL_MINUTES = int(os.getenv("POLL_INTERVAL_MINUTES", "60"))
-POLL_INTERVAL_SECONDS = float(os.getenv("POLL_INTERVAL_SECONDS", str(POLL_INTERVAL_MINUTES * 60)))
+POLL_INTERVAL_MINUTES = _safe_int(os.getenv("POLL_INTERVAL_MINUTES"), 60)
+POLL_INTERVAL_SECONDS = _safe_float(os.getenv("POLL_INTERVAL_SECONDS"), float(POLL_INTERVAL_MINUTES * 60))
+
 
 # Storage paths
-DATA_DIR = BASE_DIR / "data"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
+import tempfile
+
+is_serverless = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.getenv("LAMBDA_TASK_ROOT"))
+
+if is_serverless:
+    DATA_DIR = Path(tempfile.gettempdir()) / "notion_tracker_data"
+    REPORTS_DIR = Path(tempfile.gettempdir()) / "notion_tracker_reports"
+else:
+    DATA_DIR = BASE_DIR / "data"
+    REPORTS_DIR = BASE_DIR / "reports"
+
+try:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+except (PermissionError, OSError):
+    DATA_DIR = Path(tempfile.gettempdir()) / "notion_tracker_data"
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+try:
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+except (PermissionError, OSError):
+    REPORTS_DIR = Path(tempfile.gettempdir()) / "notion_tracker_reports"
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
 DB_FILE = DATA_DIR / "notion_tracker.sqlite"
 CONFIG_FILE = DATA_DIR / "system_config.json"
-REPORTS_DIR = BASE_DIR / "reports"
-REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+
 
