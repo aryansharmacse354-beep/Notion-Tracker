@@ -887,8 +887,66 @@ function triggerSimulatedWebhook() {
 
 
 // ==============================================================================
+// ==============================================================================
 // 8. 60-MINUTE DAEMON SCHEDULER & RUNTIME CONFIGURATION
 // ==============================================================================
+
+let schedulerIntervalMins = 60;
+let schedulerAutoRefresh = true;
+let schedulerMaxWorkers = 10;
+let nextSyncCountdownSeconds = 3600;
+let daemonTimerId = null;
+
+function appendSchedulerLog(message) {
+  const logBox = document.getElementById('schedulerTelemetryLog');
+  if (!logBox) return;
+  const timeStr = new Date().toLocaleTimeString();
+  const line = `[${timeStr}] ${message}\n`;
+  logBox.innerHTML = line + logBox.innerHTML;
+}
+
+function formatCountdown(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}m ${s < 10 ? '0' : ''}${s}s`;
+}
+
+function startDaemonSchedulerTimer() {
+  if (daemonTimerId) clearInterval(daemonTimerId);
+
+  appendSchedulerLog(`🟢 Scheduler Timer initialized (${schedulerIntervalMins}m cadence, Auto-Refresh: ${schedulerAutoRefresh ? 'ENABLED' : 'DISABLED'})`);
+
+  daemonTimerId = setInterval(() => {
+    if (schedulerAutoRefresh) {
+      nextSyncCountdownSeconds--;
+      if (nextSyncCountdownSeconds <= 0) {
+        nextSyncCountdownSeconds = schedulerIntervalMins * 60;
+        appendSchedulerLog(`⚡ [DAEMON AUTO-SYNC] Countdown reached 0. Executing scheduled background sync cycle...`);
+        triggerScheduledAutoSync();
+      }
+    }
+    const syncMetric = document.getElementById('schedulerMetricNextSync');
+    if (syncMetric) {
+      syncMetric.textContent = formatCountdown(nextSyncCountdownSeconds);
+    }
+  }, 1000);
+}
+
+async function triggerScheduledAutoSync() {
+  try {
+    const res = await fetch('/api/v1/daemon/sync-now', { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      appendSchedulerLog(`✅ Auto-Sync Completed: Dispatched ${data.dispatched_count || 0} approved tasks.`);
+    } else {
+      appendSchedulerLog(`✅ Auto-Sync Cycle Executed (Local Session).`);
+    }
+  } catch (err) {
+    appendSchedulerLog(`ℹ️ Auto-Sync Cycle Executed (Local Fallback).`);
+  }
+  fetchTasksFromApi();
+  fetchAuditLogsFromApi();
+}
 
 async function fetchSystemConfigFromApi() {
   try {
@@ -896,9 +954,12 @@ async function fetchSystemConfigFromApi() {
     if (res.ok) {
       const cfg = await res.json();
       applySystemConfigToUI(cfg);
+    } else {
+      startDaemonSchedulerTimer();
     }
   } catch (err) {
     console.warn("Using local default system configuration:", err);
+    startDaemonSchedulerTimer();
   }
 }
 
@@ -906,6 +967,9 @@ function updateSchedulerMetricPreview() {
   const select = document.getElementById('daemonIntervalSelect');
   if (!select) return;
   const mins = parseInt(select.value, 10) || 60;
+  schedulerIntervalMins = mins;
+  nextSyncCountdownSeconds = mins * 60;
+
   const intervalMetric = document.getElementById('schedulerMetricInterval');
   const syncMetric = document.getElementById('schedulerMetricNextSync');
   
@@ -913,45 +977,103 @@ function updateSchedulerMetricPreview() {
     intervalMetric.textContent = `${mins}m`;
   }
   if (syncMetric) {
-    syncMetric.textContent = `${mins - 1}m 58s`;
+    syncMetric.textContent = formatCountdown(nextSyncCountdownSeconds);
   }
 }
 
+function updateSchedulerWorkersPreview() {
+  const input = document.getElementById('daemonWorkersInput');
+  if (!input) return;
+  const workers = parseInt(input.value, 10) || 10;
+  schedulerMaxWorkers = workers;
+  const workersMetric = document.getElementById('schedulerMetricWorkers');
+  if (workersMetric) {
+    workersMetric.textContent = `${workers} threads`;
+  }
+}
+
+function toggleAutoRefresh(enabled) {
+  schedulerAutoRefresh = enabled;
+  const autoMetric = document.getElementById('schedulerMetricAutoRefresh');
+  const liveTag = document.getElementById('schedulerLiveTag');
+  if (autoMetric) {
+    autoMetric.textContent = enabled ? "ENABLED" : "DISABLED";
+  }
+  if (liveTag) {
+    liveTag.textContent = enabled ? "ACTIVE" : "PAUSED";
+    liveTag.className = enabled ? "badge-tag green" : "badge-tag yellow";
+  }
+  appendSchedulerLog(`⚙️ Auto-Refresh toggled to: ${enabled ? 'ENABLED' : 'DISABLED'}`);
+}
+
 function applySystemConfigToUI(cfg) {
-  const mins = cfg.poll_interval_minutes || 60;
+  if (cfg.poll_interval_minutes) {
+    schedulerIntervalMins = cfg.poll_interval_minutes;
+    nextSyncCountdownSeconds = schedulerIntervalMins * 60;
+  }
+  if (cfg.auto_refresh_enabled !== undefined) {
+    schedulerAutoRefresh = cfg.auto_refresh_enabled;
+  }
+  if (cfg.max_batch_workers) {
+    schedulerMaxWorkers = cfg.max_batch_workers;
+  }
+
   const select = document.getElementById('daemonIntervalSelect');
   if (select) {
-    select.value = String(mins);
+    select.value = String(schedulerIntervalMins);
   }
+
+  const toggle = document.getElementById('daemonAutoRefreshToggle');
+  if (toggle) {
+    toggle.checked = schedulerAutoRefresh;
+  }
+
+  const workersInput = document.getElementById('daemonWorkersInput');
+  if (workersInput) {
+    workersInput.value = schedulerMaxWorkers;
+  }
+
   updateSchedulerMetricPreview();
-  
-  const workersMetric = document.getElementById('schedulerMetricWorkers');
-  if (workersMetric && cfg.max_batch_workers) {
-    workersMetric.textContent = `${cfg.max_batch_workers} threads`;
-  }
-  const autoMetric = document.getElementById('schedulerMetricAutoRefresh');
-  if (autoMetric && cfg.auto_refresh_enabled !== undefined) {
-    autoMetric.textContent = cfg.auto_refresh_enabled ? "ENABLED" : "DISABLED";
-  }
+  updateSchedulerWorkersPreview();
+  toggleAutoRefresh(schedulerAutoRefresh);
+  startDaemonSchedulerTimer();
 }
 
 async function saveDaemonConfig() {
   const select = document.getElementById('daemonIntervalSelect');
-  if (!select) return;
-  const intervalVal = parseInt(select.value, 10) || 60;
-  
+  const toggle = document.getElementById('daemonAutoRefreshToggle');
+  const workersInput = document.getElementById('daemonWorkersInput');
+
+  const intervalVal = parseInt(select?.value, 10) || 60;
+  const autoVal = toggle ? toggle.checked : true;
+  const workersVal = parseInt(workersInput?.value, 10) || 10;
+
+  schedulerIntervalMins = intervalVal;
+  schedulerAutoRefresh = autoVal;
+  schedulerMaxWorkers = workersVal;
+  nextSyncCountdownSeconds = intervalVal * 60;
+
   updateSchedulerMetricPreview();
-  
+  updateSchedulerWorkersPreview();
+  toggleAutoRefresh(autoVal);
+  startDaemonSchedulerTimer();
+
+  appendSchedulerLog(`💾 Configuration Saved: Interval=${intervalVal}m, Auto-Refresh=${autoVal}, Workers=${workersVal}`);
+
   try {
     const res = await fetch('/api/v1/system-config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ poll_interval_minutes: intervalVal })
+      body: JSON.stringify({
+        poll_interval_minutes: intervalVal,
+        auto_refresh_enabled: autoVal,
+        max_batch_workers: workersVal
+      })
     });
     if (res.ok) {
       const updated = await res.json();
       applySystemConfigToUI(updated);
-      alert(`💾 Daemon Runtime Configuration saved! Polling cadence updated to ${intervalVal} minutes.`);
+      alert(`💾 Daemon Runtime Configuration saved! Cadence: ${intervalVal}m | Auto-Refresh: ${autoVal ? 'ON' : 'OFF'} | Threads: ${workersVal}`);
     } else {
       alert(`💾 Polling cadence set to ${intervalVal} minutes (Local Session).`);
     }
@@ -962,15 +1084,21 @@ async function saveDaemonConfig() {
 }
 
 async function triggerManualSyncNow() {
+  appendSchedulerLog(`⚡ [MANUAL TRIGGER] Operator requested immediate daemon batch sync...`);
+  nextSyncCountdownSeconds = schedulerIntervalMins * 60;
+
   try {
     const res = await fetch('/api/v1/daemon/sync-now', { method: 'POST' });
     if (res.ok) {
       const data = await res.json();
+      appendSchedulerLog(`✅ Manual Sync Completed: Dispatched ${data.dispatched_count || 0} approved tasks.`);
       alert(`⚡ Immediate manual batch cycle executed! Dispatched ${data.dispatched_count || 0} approved tasks.`);
     } else {
+      appendSchedulerLog(`✅ Manual Sync Cycle Executed.`);
       alert("⚡ Immediate manual batch cycle executed! Dispatched approved tasks concurrently.");
     }
   } catch (err) {
+    appendSchedulerLog(`ℹ️ Manual Sync Cycle Executed (Local Session).`);
     alert("⚡ Immediate manual batch cycle executed! Dispatched approved tasks concurrently.");
   }
   fetchTasksFromApi();

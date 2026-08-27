@@ -420,9 +420,16 @@
         <div class="scroll-panel" style="height: 100%;">
           <div class="panel-header">
             <h3><span>⚙️</span> System Config & 60-Minute Background Daemon Scheduler</h3>
-            <button class="btn btn-primary" onclick="saveDaemonConfig()">💾 Save Runtime Configuration</button>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn btn-secondary" onclick="triggerManualSyncNow()">⚡ Trigger Manual Sync</button>
+              <button class="btn btn-primary" onclick="saveDaemonConfig()">💾 Save Configuration</button>
+            </div>
           </div>
           <div class="panel-body">
+            <div class="risk-alert-box low" id="schedulerStatusBanner">
+              <span>🟢 <b>60-MINUTE DAEMON SCHEDULER ACTIVE</b> — Persistent background worker polling every 60 minutes with OCC 3-way merge & Token Bucket rate limiting.</span>
+            </div>
+
             <div class="metrics-strip" style="margin-bottom: 20px;">
               <div class="metric-card">
                 <div class="metric-txt">Polling Interval</div>
@@ -434,7 +441,7 @@
               </div>
               <div class="metric-card">
                 <div class="metric-txt">Next Scheduled Sync</div>
-                <div class="metric-num" id="schedulerMetricNextSync" style="font-size: 1.2rem;">58m 22s</div>
+                <div class="metric-num" id="schedulerMetricNextSync" style="font-size: 1.2rem; font-family: 'JetBrains Mono', monospace; color: #818cf8;">59m 59s</div>
               </div>
               <div class="metric-card">
                 <div class="metric-txt">Batch Worker Pool</div>
@@ -442,19 +449,50 @@
               </div>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Polling Interval Cadence</label>
-              <select id="daemonIntervalSelect" class="form-control" onchange="updateSchedulerMetricPreview()">
-                <option value="60" selected>60 Minutes (Production Enterprise Default)</option>
-                <option value="30">30 Minutes</option>
-                <option value="15">15 Minutes</option>
-                <option value="5">5 Minutes</option>
-                <option value="1">1 Minute (Rapid Test Mode)</option>
-              </select>
-            </div>
+            <div class="grid-2col" style="margin-bottom: 20px;">
+              <div style="background: var(--bg-card-sub); border: 1px solid var(--card-border); padding: 14px; border-radius: 6px;">
+                <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 12px; font-size: 0.88rem;">⚙️ Scheduler Control Settings</div>
+                
+                <div class="form-group">
+                  <label class="form-label">Polling Interval Cadence</label>
+                  <select id="daemonIntervalSelect" class="form-control" onchange="updateSchedulerMetricPreview()">
+                    <option value="60" selected>60 Minutes (Production Enterprise Default)</option>
+                    <option value="30">30 Minutes</option>
+                    <option value="15">15 Minutes</option>
+                    <option value="5">5 Minutes</option>
+                    <option value="1">1 Minute (Rapid Test Mode)</option>
+                  </select>
+                </div>
 
-            <div class="form-group" style="margin-top: 20px;">
-              <button class="btn btn-secondary" onclick="triggerManualSyncNow()">⚡ Trigger Immediate Manual Daemon Sync</button>
+                <div class="form-group" style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 10px; border-radius: 6px; border: 1px solid var(--card-border);">
+                  <div>
+                    <div style="font-weight: 700; font-size: 0.82rem; color: var(--text-primary);">Automated Background Sync</div>
+                    <div style="font-size: 0.72rem; color: var(--text-muted);">Enable dynamic background polling cycles</div>
+                  </div>
+                  <input type="checkbox" id="daemonAutoRefreshToggle" checked onchange="toggleAutoRefresh(this.checked)" style="transform: scale(1.3); cursor: pointer;">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Batch Worker Thread Pool Limit</label>
+                  <input type="number" id="daemonWorkersInput" class="form-control" value="10" min="1" max="50" onchange="updateSchedulerWorkersPreview()">
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 16px;">
+                  <button class="btn btn-primary" onclick="saveDaemonConfig()" style="flex: 1;">💾 Save Configuration</button>
+                  <button class="btn btn-secondary" onclick="triggerManualSyncNow()" style="flex: 1;">⚡ Sync Now</button>
+                </div>
+              </div>
+
+              <!-- Right: Live Scheduler Telemetry & Sync Log -->
+              <div style="background: var(--bg-card-sub); border: 1px solid var(--card-border); padding: 14px; border-radius: 6px; display: flex; flex-direction: column;">
+                <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 10px; font-size: 0.88rem; display: flex; justify-content: space-between; align-items: center;">
+                  <span>📊 Daemon Telemetry & Execution Log</span>
+                  <span class="badge-tag green" id="schedulerLiveTag">ACTIVE</span>
+                </div>
+                <div id="schedulerTelemetryLog" style="background: var(--bg-main); border: 1px solid var(--card-border); padding: 10px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; flex: 1; min-height: 180px; max-height: 250px; overflow-y: auto; color: var(--text-secondary); line-height: 1.5;">
+                  <!-- Appended via JS -->
+                </div>
+              </div>
             </div>
           </div>
         </div>
