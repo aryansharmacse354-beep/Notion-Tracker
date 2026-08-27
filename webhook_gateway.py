@@ -139,10 +139,29 @@ def export_audit_pdf():
 
 @app.get("/api/v1/export/csv")
 def export_audit_csv():
-    """Exports audit logs and tasks as formatted CSV for Excel."""
+    """Exports audit logs and registered tasks as formatted CSV for Excel with UTF-8 BOM."""
+    tasks = default_store.list_tasks(include_archived=True)
     logs = default_store.list_audit_logs()
     output = io.StringIO()
     writer = csv.writer(output)
+
+    writer.writerow(["=== REGISTERED TASKS DATABASE & COGNITIVE PRE-AUDITS ==="])
+    writer.writerow(["Task ID", "Title", "Category", "Priority", "Risk Level", "Status", "Budget", "OCC Version", "Source"])
+    for t in tasks:
+        writer.writerow([
+            t.get("id"),
+            t.get("title"),
+            t.get("category"),
+            t.get("priority"),
+            t.get("risk_level"),
+            t.get("status"),
+            t.get("budget", "$0"),
+            t.get("version", 1),
+            t.get("source", "Notion Store"),
+        ])
+
+    writer.writerow([])
+    writer.writerow(["=== INDUSTRIAL SHA-256 CRYPTOGRAPHIC AUDIT LEDGER ==="])
     writer.writerow(["Log ID", "Record ID", "Run Name", "Action / Status", "Operator", "Timestamp", "SHA-256 Signature", "Prev Signature"])
     for l in logs:
         p_title = l.get("payload_data", {}).get("title", l.get("record_id", ""))
@@ -156,10 +175,11 @@ def export_audit_csv():
             l.get("signature"),
             l.get("prev_signature"),
         ])
-    csv_bytes = output.getvalue().encode("utf-8")
+
+    csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")
     return Response(
         content=csv_bytes,
-        media_type="text/csv",
+        media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": "attachment; filename=notion_tracker_audit_ledger.csv"},
     )
 

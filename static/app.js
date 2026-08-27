@@ -1356,22 +1356,52 @@ async function downloadReport(type) {
     }
     window.open('/api/v1/export/pdf', '_blank');
   } else if (type === 'excel' || type === 'csv') {
-    // Generate CSV Excel data directly
-    let csvContent = "data:text/csv;charset=utf-8,";
+    try {
+      const res = await fetch('/api/v1/export/csv');
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'notion_tracker_audit_ledger.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        return;
+      }
+    } catch (e) {
+      console.warn("Backend CSV endpoint unavailable, generating client blob.", e);
+    }
+
+    // Client-side fallback: Blob creation with UTF-8 BOM for Excel
+    let csvContent = "\ufeff";
+    csvContent += "=== REGISTERED TASKS DATABASE & COGNITIVE PRE-AUDITS ===\n";
+    csvContent += "Task ID,Title,Category,Priority,Risk Level,Status,Budget,OCC Version\n";
+    tasksData.forEach(t => {
+      const title = (t.title || '').replace(/"/g, '""');
+      const cat = (t.category || '').replace(/"/g, '""');
+      csvContent += `"${t.id}","${title}","${cat}","${t.priority}","${t.risk_level}","${t.status}","${t.budget || '$0'}","v${t.version || 1}"\n`;
+    });
+
+    csvContent += "\n=== INDUSTRIAL SHA-256 CRYPTOGRAPHIC AUDIT LEDGER ===\n";
     csvContent += "Log ID,Record ID,Run Name,Action Status,Provider,Timestamp,SHA256 Signature\n";
     auditLogsData.forEach(l => {
-      const runName = (l.payload && l.payload.title ? l.payload.title : l.record_id).replace(/,/g, ' ');
-      const provider = (l.payload && l.payload.provider ? l.payload.provider : l.operator_name).replace(/,/g, ' ');
-      const status = (l.payload && l.payload.status ? l.payload.status : l.action).replace(/,/g, ' ');
+      const runName = (l.payload && l.payload.title ? l.payload.title : l.record_id).replace(/"/g, '""');
+      const provider = (l.payload && l.payload.provider ? l.payload.provider : l.operator_name).replace(/"/g, '""');
+      const status = (l.payload && l.payload.status ? l.payload.status : l.action).replace(/"/g, '""');
       csvContent += `"${l.id}","${l.record_id}","${runName}","${status}","${provider}","${l.timestamp}","${l.signature}"\n`;
     });
-    const encodedUri = encodeURI(csvContent);
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "notion_tracker_audit_ledger.csv");
+    link.href = url;
+    link.download = "notion_tracker_audit_ledger.csv";
     document.body.appendChild(link);
     link.click();
     link.remove();
+    window.URL.revokeObjectURL(url);
   }
 }
 
