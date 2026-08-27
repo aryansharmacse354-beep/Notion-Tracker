@@ -1338,7 +1338,14 @@ let originalLogSnapshot = null;
 async function downloadReport(type) {
   if (type === 'pdf') {
     try {
-      const res = await fetch('/api/v1/export/pdf');
+      const res = await fetch('/api/v1/export/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: tasksData,
+          audit_logs: auditLogsData
+        })
+      });
       if (res.ok) {
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
@@ -1357,7 +1364,14 @@ async function downloadReport(type) {
     window.open('/api/v1/export/pdf', '_blank');
   } else if (type === 'excel' || type === 'csv') {
     try {
-      const res = await fetch('/api/v1/export/csv');
+      const res = await fetch('/api/v1/export/csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tasks: tasksData,
+          audit_logs: auditLogsData
+        })
+      });
       if (res.ok) {
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);

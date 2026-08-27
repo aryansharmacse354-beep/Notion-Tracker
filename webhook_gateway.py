@@ -7,7 +7,7 @@ nonce replay protection, timestamp drift checks, AI pre-auditing, and Notion typ
 import time
 import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from fastapi import FastAPI, Request, Response, Header, HTTPException, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -124,11 +124,23 @@ import io
 import csv
 
 
-@app.get("/api/v1/export/pdf")
-def export_audit_pdf():
+class ExportReportRequest(BaseModel):
+    tasks: Optional[List[Dict[str, Any]]] = None
+    audit_logs: Optional[List[Dict[str, Any]]] = None
+
+
+@app.api_route("/api/v1/export/pdf", methods=["GET", "POST"])
+def export_audit_pdf(req: ExportReportRequest = ExportReportRequest()):
     """Generates and downloads the executive-grade PDF audit report."""
-    tasks = default_store.list_tasks(include_archived=True)
-    logs = default_store.list_audit_logs()
+    tasks = req.tasks if (req.tasks and len(req.tasks) > 0) else default_store.list_tasks(include_archived=True)
+    logs = req.audit_logs if (req.audit_logs and len(req.audit_logs) > 0) else default_store.list_audit_logs()
+
+    if not tasks:
+        default_store._seed_default_tasks()
+        tasks = default_store.list_tasks(include_archived=True)
+    if not logs:
+        logs = default_store.list_audit_logs()
+
     pdf_bytes = PDFReportBuilder.generate_task_audit_pdf(tasks, logs)
     return Response(
         content=pdf_bytes,
@@ -137,11 +149,18 @@ def export_audit_pdf():
     )
 
 
-@app.get("/api/v1/export/csv")
-def export_audit_csv():
+@app.api_route("/api/v1/export/csv", methods=["GET", "POST"])
+def export_audit_csv(req: ExportReportRequest = ExportReportRequest()):
     """Exports audit logs and registered tasks as formatted CSV for Excel with UTF-8 BOM."""
-    tasks = default_store.list_tasks(include_archived=True)
-    logs = default_store.list_audit_logs()
+    tasks = req.tasks if (req.tasks and len(req.tasks) > 0) else default_store.list_tasks(include_archived=True)
+    logs = req.audit_logs if (req.audit_logs and len(req.audit_logs) > 0) else default_store.list_audit_logs()
+
+    if not tasks:
+        default_store._seed_default_tasks()
+        tasks = default_store.list_tasks(include_archived=True)
+    if not logs:
+        logs = default_store.list_audit_logs()
+
     output = io.StringIO()
     writer = csv.writer(output)
 
@@ -164,7 +183,8 @@ def export_audit_csv():
     writer.writerow(["=== INDUSTRIAL SHA-256 CRYPTOGRAPHIC AUDIT LEDGER ==="])
     writer.writerow(["Log ID", "Record ID", "Run Name", "Action / Status", "Operator", "Timestamp", "SHA-256 Signature", "Prev Signature"])
     for l in logs:
-        p_title = l.get("payload_data", {}).get("title", l.get("record_id", ""))
+        payload = l.get("payload") or l.get("payload_data") or {}
+        p_title = payload.get("title", l.get("record_id", ""))
         writer.writerow([
             l.get("id"),
             l.get("record_id"),
@@ -173,7 +193,7 @@ def export_audit_csv():
             l.get("operator_name"),
             l.get("timestamp"),
             l.get("signature"),
-            l.get("prev_signature"),
+            l.get("prev_signature", ""),
         ])
 
     csv_bytes = b"\xef\xbb\xbf" + output.getvalue().encode("utf-8")

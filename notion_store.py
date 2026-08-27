@@ -50,6 +50,7 @@ class NotionStore:
         self.self_healing = WorkspaceSelfHealing()
         self._init_db()
         self._seed_default_users()
+        self._seed_default_tasks()
 
     @contextmanager
     def _get_connection(self):
@@ -323,6 +324,164 @@ class NotionStore:
                 """, tmpl)
             conn.commit()
 
+    def _seed_default_tasks(self) -> None:
+        """Seeds default tasks and audit ledger entries if datastore is empty."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM tasks")
+            count = cursor.fetchone()[0]
+            if count == 0:
+                default_tasks = [
+                    (
+                        "task_001_academic",
+                        "Provisions for Lab Group B",
+                        "Register 15 student seats and dispatch welcome packages with syllabus attachments.",
+                        "normal",
+                        "Academic Registration",
+                        "Ready for Review",
+                        "LOW",
+                        0.88,
+                        json.dumps([
+                            "[Step 1] Ingested raw payload and verified HMAC integrity.",
+                            "[Step 2] Tokenized input (14 words). Extracted title: 'Provisions for Lab Group B'.",
+                            "[Step 3] Pattern Analysis: Standard routine academic registration task.",
+                            "[Step 4] Domain Classification mapped to category: 'Academic Registration'."
+                        ]),
+                        "Academic registration welcome packages staged.",
+                        "<p>Welcome to Lab Group B</p>",
+                        "Provisions for Lab Group B staged.",
+                        "Academic Registration Portal",
+                        1,
+                        "nonce_001",
+                        "$2,500",
+                        "Assessed as LOW risk (88% confidence) under 'Academic Registration'. Pre-compiled dispatch draft staged for human review.",
+                        "Provisions for Lab Group B staged for human review.",
+                        "",
+                        "fingerprint_001",
+                        "",
+                        "",
+                        "",
+                        "[]",
+                        time.time() - 3600,
+                        time.time() - 3600,
+                        0,
+                    ),
+                    (
+                        "task_002_security",
+                        "Security Incident: Unauthorized Root Access Attempt",
+                        "Detected 40 failed SSH attempts from external subnet. Emergency revoke and purge affected API keys immediately.",
+                        "critical",
+                        "Security & Identity",
+                        "Ready for Review",
+                        "CRITICAL",
+                        0.96,
+                        json.dumps([
+                            "[Step 1] Ingested raw payload with valid HMAC-SHA256 signature.",
+                            "[Step 2] Pattern Analysis: Detected high-severity operational impact or security-sensitive keywords.",
+                            "[Step 3] Evaluated as CRITICAL risk requiring operator biometric clearance."
+                        ]),
+                        "Security incident alert staged.",
+                        "<p>Security Alert: Unauthorized Root Access</p>",
+                        "Security Incident alert staged.",
+                        "AWS GuardDuty Ingestion",
+                        1,
+                        "nonce_002",
+                        "$15,000",
+                        "Assessed as CRITICAL risk (96% confidence) under 'Security & Identity'. High-risk classification requires operator biometric clearance.",
+                        "Security Incident emergency revocation staged.",
+                        "",
+                        "fingerprint_002",
+                        "",
+                        "",
+                        "",
+                        "[]",
+                        time.time() - 1800,
+                        time.time() - 1800,
+                        0,
+                    ),
+                    (
+                        "task_agent_003_voice",
+                        "Voice Memo: Physics Optics Lab Equipment Budget & Priority Upgrade",
+                        "Target task for testing Gemini 1.5 Flash Voice Memo Agent. Process attached audio files (e.g. voice_approve_command.wav) to update budget and escalate priority.",
+                        "high",
+                        "Academic Registration",
+                        "Ready for Review",
+                        "HIGH",
+                        0.92,
+                        json.dumps([
+                            "[Step 1] Ingested native Notion Audio Block attachment.",
+                            "[Step 2] Staged for Gemini 1.5 Flash Voice Agent speech-to-text transcription.",
+                            "[Step 3] Ready for Voice Agent command execution in Agent Console."
+                        ]),
+                        "Voice memo processed for Physics Optics Lab.",
+                        "<p>Optics Lab Equipment Request</p>",
+                        "Voice Memo request staged.",
+                        "Notion Voice Memo Agent",
+                        1,
+                        "nonce_003",
+                        "$3,500",
+                        "Assessed as HIGH risk (92% confidence) under 'Academic Registration'. Spoken voice memo payload staged.",
+                        "Voice Memo update staged.",
+                        "",
+                        "fingerprint_003",
+                        "",
+                        "",
+                        "voice_approve_command.wav",
+                        "[]",
+                        time.time() - 900,
+                        time.time() - 900,
+                        0,
+                    ),
+                ]
+                cursor.executemany("""
+                    INSERT OR REPLACE INTO tasks (
+                        id, title, details, priority, category, status, risk_level, confidence_score,
+                        reasoning_trace, draft_summary, draft_email_html, draft_teams_text, source,
+                        version, nonce, budget, ai_reasoning_ledger, proposed_ai_draft, edited_draft,
+                        ingestion_fingerprint, dlq_error_trace, dlq_reason, audio_file, comment_thread,
+                        created_at, updated_at, archived
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, default_tasks)
+
+            cursor.execute("SELECT COUNT(*) FROM audit_logs")
+            log_count = cursor.fetchone()[0]
+            if log_count == 0:
+                gen_hash = AuditLedger.genesis_block_hash()
+                default_logs = [
+                    (
+                        "task_001_academic",
+                        "INGESTED",
+                        "Academic Registration Portal",
+                        time.time() - 3600,
+                        json.dumps({"title": "Provisions for Lab Group B", "status": "Ready for Review"}),
+                        AuditLedger.hash_log_entry("task_001_academic", "INGESTED", "Academic Registration Portal", time.time() - 3600, json.dumps({"title": "Provisions for Lab Group B", "status": "Ready for Review"}), gen_hash),
+                        gen_hash,
+                    ),
+                    (
+                        "task_002_security",
+                        "INGESTED",
+                        "AWS GuardDuty Ingestion",
+                        time.time() - 1800,
+                        json.dumps({"title": "Security Incident: Unauthorized Root Access Attempt", "status": "CRITICAL"}),
+                        AuditLedger.hash_log_entry("task_002_security", "INGESTED", "AWS GuardDuty Ingestion", time.time() - 1800, json.dumps({"title": "Security Incident: Unauthorized Root Access Attempt", "status": "CRITICAL"}), gen_hash),
+                        gen_hash,
+                    ),
+                    (
+                        "system_heartbeat_genesis",
+                        "SYSTEM_HEARTBEAT",
+                        "SystemHealthMonitor",
+                        time.time() - 900,
+                        json.dumps({"service": "Notion Tracker Gateway", "status": "HEALTHY"}),
+                        AuditLedger.hash_log_entry("system_heartbeat_genesis", "SYSTEM_HEARTBEAT", "SystemHealthMonitor", time.time() - 900, json.dumps({"service": "Notion Tracker Gateway", "status": "HEALTHY"}), gen_hash),
+                        gen_hash,
+                    ),
+                ]
+                cursor.executemany("""
+                    INSERT OR REPLACE INTO audit_logs (
+                        record_id, action, operator_name, timestamp, payload_data, signature, prev_signature
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, default_logs)
+            conn.commit()
 
 
     # --- Task Methods ---
