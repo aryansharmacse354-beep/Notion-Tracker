@@ -57,6 +57,7 @@ from config import (
     RATE_LIMIT_CAPACITY,
     RATE_LIMIT_REPLENISH_RATE,
     ADMIN_OVERRIDE_PIN,
+    NOTIFICATION_RECIPIENT_EMAIL,
 )
 
 from notion_enterprise_guard import (
@@ -1017,7 +1018,7 @@ elif active_module_key == "nav_biometrics":
         sig_task_id = st.text_input("Target Task ID for Signature:", value="task_enterprise_001")
         sig_action = st.selectbox("Action to Authorize:", ["APPROVE_BUDGET", "DISPATCH_COMMUNICATIONS", "BATCH_APPROVE_PAGES", "OVERRIDE_PRIORITY"])
         
-        test_email = f"{st.session_state.active_user.lower().replace(' ', '.')}@aiexperts.edu"
+        test_email = NOTIFICATION_RECIPIENT_EMAIL if "aryan" in st.session_state.active_user.lower() else f"{st.session_state.active_user.lower().replace(' ', '.')}@aiexperts.edu"
         test_role = current_user.get("role", "Auditor & Engineer") if current_user else "Auditor & Engineer"
 
         calc_hash = calculate_operator_signature(

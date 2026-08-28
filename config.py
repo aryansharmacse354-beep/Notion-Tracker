@@ -59,8 +59,8 @@ RATE_LIMIT_REPLENISH_RATE = _safe_float(os.getenv("RATE_LIMIT_REPLENISH_RATE"), 
 # Outbound Notification Targets
 TEAMS_WEBHOOK_URL = os.getenv("TEAMS_WEBHOOK_URL", "")
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
-SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "notion-tracker@aiexperts.edu")
-NOTIFICATION_RECIPIENT_EMAIL = os.getenv("NOTIFICATION_RECIPIENT_EMAIL", "ops-team@aiexperts.edu")
+SENDGRID_FROM_EMAIL = os.getenv("SENDGRID_FROM_EMAIL", "aryansharma10122006@gmail.com")
+NOTIFICATION_RECIPIENT_EMAIL = os.getenv("NOTIFICATION_RECIPIENT_EMAIL", "aryansharma10122006@gmail.com")
 
 # Biometric & OTP Gate
 SMS_OTP_SECRET = os.getenv("SMS_OTP_SECRET", "enterprise_totp_random_seed_key_99")

@@ -4,7 +4,7 @@ import sys
 import os
 import webbrowser
 
-VERCEL_PROD_URL = "https://notion-tracker-pearl.vercel.app/"
+VERCEL_PROD_URL = os.getenv("VERCEL_PROD_URL", "https://notion-tracker-ai-experts1.vercel.app/")
 
 def run_app():
     print("=" * 65)

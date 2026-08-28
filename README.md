@@ -51,6 +51,7 @@ graph TD
 | **Layer 1: Native Notion Workspace** | Notion Desktop / Web | Non-Technical Managers & Executives | Drag-and-Drop Operations Grid, Tasks Kanban, DLQ Gallery View, Operator Leaderboard, 100% passes **The Turn-Off Test**. |
 | **Layer 2: Streamlit HITL Portal** | `http://localhost:8501` | Operations Officers & Auditors | Biometric Facial Mesh HUD, SMS OTP Gate, OCC 3-Way Merge Conflict Simulator, PDF/Excel Reporting, Day/Night Theme. |
 | **Layer 3: Single-Page Web App** | `http://localhost:8000/` | SREs, Developers & Integrators | 100vh locked layout, Live Webhook Simulator, Interactive `@AI` Comment & Voice Agent Console, Real-Time SHA-256 Ledger. |
+| **Layer 4: Vercel Production App** | `https://notion-tracker-ai-experts1.vercel.app/` | Global Users & Enterprise Operations | Cloud Serverless Deployment, Fast Execution Edge, Webhook API Gateway. |
 
 ---
 

@@ -306,20 +306,26 @@ class NotionTrackerDaemon:
         self.process_cycle()
         self.last_sync_time = time.time()
 
+        last_status_print = 0.0
         try:
             while self.is_running:
                 # Dynamic runtime configuration check on each 1-second tick
                 cfg = default_store.get_system_config()
-                current_interval = float(cfg.get("poll_interval_seconds", self.poll_interval_seconds))
+                current_interval = float(self.poll_interval_seconds)
                 auto_refresh = cfg.get("auto_refresh_enabled", True)
 
                 now = time.time()
                 elapsed = now - self.last_sync_time
+                remaining = max(0.0, current_interval - elapsed)
 
                 if auto_refresh and elapsed >= current_interval:
-                    logger.info(f"[DAEMON CYCLE] Executing scheduled {int(current_interval // 60)}m state synchronization...")
+                    logger.info(f"[DAEMON CYCLE] Executing scheduled state synchronization (Interval: {current_interval:.0f}s)...")
                     self.process_cycle()
                     self.last_sync_time = time.time()
+                    last_status_print = time.time()
+                elif now - last_status_print >= 10.0:
+                    logger.info(f"[DAEMON SCHEDULED] Next cycle in {int(remaining)}s (Cadence: {current_interval:.0f}s) | Status: RUNNING 🟢")
+                    last_status_print = now
 
                 # Low-latency 1s sleep allows instant responsiveness to runtime config changes or SIGINT
                 time.sleep(1.0)
@@ -332,15 +338,21 @@ class NotionTrackerDaemon:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Notion Tracker Unified Background Daemon")
     parser.add_argument("--once", action="store_true", help="Execute a single concurrent batch cycle and exit")
-    parser.add_argument("--minutes", type=int, default=POLL_INTERVAL_MINUTES, help="Polling interval in minutes (default: 60)")
+    parser.add_argument("--minutes", type=int, default=None, help="Polling interval in minutes")
     parser.add_argument("--seconds", type=float, default=None, help="Polling interval in seconds for testing (e.g. 5)")
     args = parser.parse_args()
 
-    interval_mins = args.minutes
-    daemon = NotionTrackerDaemon(poll_interval_minutes=interval_mins)
+    daemon = NotionTrackerDaemon(poll_interval_minutes=POLL_INTERVAL_MINUTES)
 
     if args.seconds is not None:
-        daemon.poll_interval_seconds = args.seconds
+        daemon.poll_interval_seconds = float(args.seconds)
+        default_store.update_system_config({"poll_interval_seconds": float(args.seconds)})
+    elif args.minutes is not None:
+        daemon.poll_interval_seconds = float(args.minutes * 60)
+        default_store.update_system_config({
+            "poll_interval_minutes": args.minutes,
+            "poll_interval_seconds": float(args.minutes * 60)
+        })
 
     if args.once:
         logger.info("Executing single concurrent pass cycle...")

@@ -598,6 +598,27 @@ async def ingest_webhook(
         )
 
 
+@app.post("/api/v1/daemon/trigger")
+def trigger_daemon_cycle():
+    """Triggers an instant execution cycle of the unified background daemon scheduler."""
+    try:
+        from main import NotionTrackerDaemon
+        daemon = NotionTrackerDaemon(poll_interval_minutes=1)
+        dispatched = daemon.process_cycle()
+        return {
+            "status": "SUCCESS",
+            "message": f"Daemon scheduler cycle executed successfully. Dispatched {dispatched} task(s).",
+            "dispatched_count": dispatched,
+            "timestamp": time.time(),
+        }
+    except Exception as e:
+        logger.error(f"Failed to trigger daemon cycle: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"status": "ERROR", "message": str(e)},
+        )
+
+
 if __name__ == "__main__":
     import uvicorn
     from config import GATEWAY_HOST, GATEWAY_PORT

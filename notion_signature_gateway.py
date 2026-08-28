@@ -210,7 +210,7 @@ def run_security_demonstration():
     # Establish Operator Profiles
     aryan_profile = {
         "name": "Aryan Sharma",
-        "email": "aryan.sharma@aiexperts.edu",
+        "email": "aryansharma10122006@gmail.com",
         "role": "Lead Developer",
         "phone": "+919876543210"
     }
