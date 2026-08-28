@@ -1,17 +1,15 @@
 services:
   - type: web
-    name: notion-tracker
+    name: notion-tracker-backend
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python run_app.py
-    healthCheckPath: /health
-    autoDeploy: true
+    startCommand: uvicorn webhook_gateway:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
-      - key: STREAMLIT_SERVER_HEADLESS
-        value: "true"
       - key: STORAGE_MODE
         value: hybrid
       - key: WEBHOOK_SECRET
-        generateValue: true
+        value: super_secret_enterprise_notion_key_2026
+      - key: PORT
+        value: 10000
