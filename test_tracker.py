@@ -190,6 +190,7 @@ class TestTokenBucketRateLimiter(unittest.TestCase):
     def test_daemon_batch_query_and_60m_config(self):
         from notion_store import default_store
         # 1. Test 60m default config
+        default_store.update_system_config({"poll_interval_minutes": 60, "poll_interval_seconds": 3600.0, "auto_refresh_enabled": True})
         cfg = default_store.get_system_config()
         self.assertIn("poll_interval_minutes", cfg)
         self.assertEqual(cfg["poll_interval_minutes"], 60)

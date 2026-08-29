@@ -178,7 +178,9 @@ def _dispatch_single_task_worker(task: Dict[str, Any]) -> Tuple[str, bool, str]:
             reasoning_steps=trace,
             raw_payload=task,
         )
-        return task_id, True, f"Successfully executed template '{matching_tmpl.get('name', 'Standard')}' (OCC v{updated_task.get('version')})"
+        tmpl_name = matching_tmpl.get("name", "Standard") if matching_tmpl else "Standard"
+        version_num = updated_task.get("version", 1) if isinstance(updated_task, dict) else 1
+        return task_id, True, f"Successfully executed template '{tmpl_name}' (OCC v{version_num})"
 
     except Exception as e:
         err_tb = traceback.format_exc()
@@ -311,6 +313,10 @@ class NotionTrackerDaemon:
             while self.is_running:
                 # Dynamic runtime configuration check on each 1-second tick
                 cfg = default_store.get_system_config()
+                if "poll_interval_seconds" in cfg and cfg["poll_interval_seconds"] is not None:
+                    self.poll_interval_seconds = float(cfg["poll_interval_seconds"])
+                elif "poll_interval_minutes" in cfg and cfg["poll_interval_minutes"] is not None:
+                    self.poll_interval_seconds = float(cfg["poll_interval_minutes"] * 60)
                 current_interval = float(self.poll_interval_seconds)
                 auto_refresh = cfg.get("auto_refresh_enabled", True)
 
