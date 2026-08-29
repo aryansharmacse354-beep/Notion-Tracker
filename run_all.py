@@ -29,10 +29,10 @@ def start_all_services():
 
         time.sleep(1.5)
 
-        # 2. Start Background Worker Daemon
-        print("[*] Starting Background Polling Daemon...")
+        # 2. Start Background Worker Daemon (1-Minute Rapid Cadence)
+        print("[*] Starting Background Polling Daemon (1-Minute Rapid Cadence)...")
         p_daemon = subprocess.Popen(
-            [sys.executable, "main.py"],
+            [sys.executable, "main.py", "--minutes", "1"],
         )
         processes.append(("Worker Daemon", p_daemon))
 

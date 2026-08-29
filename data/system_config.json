@@ -1,8 +1,8 @@
 {
   "poll_interval_minutes": 60,
-  "poll_interval_seconds": 3600.0,
+  "poll_interval_seconds": 60.0,
   "auto_refresh_enabled": true,
   "max_batch_workers": 10,
   "language": "en",
-  "last_sync_timestamp": 1787980064.9280748
+  "last_sync_timestamp": 1787981640.115691
 }
