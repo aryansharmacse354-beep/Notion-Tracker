@@ -36,9 +36,11 @@ ENV/
 
 # Logs and databases
 *.log
+*.sqlite
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+data/*.sqlite
 
 # IDE / Editor files
 .vscode/

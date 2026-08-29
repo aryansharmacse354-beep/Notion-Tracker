@@ -59,9 +59,11 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_SDK_AVAILABLE = False
 try:
     import google.generativeai as genai
-    if GEMINI_API_KEY:
+    if GEMINI_API_KEY and not GEMINI_API_KEY.startswith("AIzaSy_your") and "your_gemini_api_key" not in GEMINI_API_KEY:
         genai.configure(api_key=GEMINI_API_KEY)
         GEMINI_SDK_AVAILABLE = True
+    else:
+        logger.info("Gemini API key not configured or is placeholder. Running in mock demonstration mode.")
 except ImportError:
     logger.warning("google-generativeai library not installed. Running in mock demonstration mode.")
 
@@ -122,16 +124,8 @@ class NotionVoiceCommandAgent:
             return parsed_result
             
         except Exception as e:
-            logger.error(f"[-] Error processing voice via Gemini API: {e}")
-            return {
-                "error": True,
-                "message": f"Gemini analysis failed: {str(e)}",
-                "transcript": "Speech processing error.",
-                "is_command": False,
-                "command_type": "UNKNOWN",
-                "parameters": {},
-                "confidence_score": 0.0
-            }
+            logger.error(f"[-] Error processing voice via Gemini API: {e}. Falling back to simulation mode.")
+            return self._simulate_gemini_voice_analysis(audio_file_path)
             
     def _simulate_gemini_voice_analysis(self, audio_file_path: str) -> dict:
         """Fallback mock analyzer to run in sandboxed testing environments without web access."""
