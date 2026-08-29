@@ -56,16 +56,18 @@ except ImportError:
 
 # Conditional import of the Gemini SDK
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_SDK_AVAILABLE = False
-try:
-    import google.generativeai as genai
-    if GEMINI_API_KEY and not GEMINI_API_KEY.startswith("AIzaSy_your") and "your_gemini_api_key" not in GEMINI_API_KEY:
-        genai.configure(api_key=GEMINI_API_KEY)
-        GEMINI_SDK_AVAILABLE = True
-    else:
-        logger.info("Gemini API key not configured or is placeholder. Running in mock demonstration mode.")
-except ImportError:
-    logger.warning("google-generativeai library not installed. Running in mock demonstration mode.")
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", category=FutureWarning)
+    try:
+        import google.generativeai as genai
+        if GEMINI_API_KEY and not GEMINI_API_KEY.startswith("AIzaSy_your") and "your_gemini_api_key" not in GEMINI_API_KEY:
+            genai.configure(api_key=GEMINI_API_KEY)
+            GEMINI_SDK_AVAILABLE = True
+        else:
+            logger.info("Gemini API key not configured or is placeholder. Running in mock demonstration mode.")
+    except ImportError:
+        logger.warning("google-generativeai library not installed. Running in mock demonstration mode.")
 
 
 class NotionVoiceCommandAgent:
